@@ -1,0 +1,9 @@
+[Unit]
+Description=Netfoil HTTPS Inspection
+
+[Socket]
+ListenStream=192.168.122.1:8080
+Service=netfoil-hi.service
+
+[Install]
+WantedBy=sockets.target

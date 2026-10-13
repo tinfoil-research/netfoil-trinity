@@ -1,0 +1,50 @@
+# man apparmor.d
+abi <abi/4.0>,
+include <tunables/global>
+
+/usr/sbin/netfoil-hi flags=(enforce) {
+  # /etc/apparmor.d/abstractions/base
+  include <abstractions/base>
+  network inet tcp,
+  network inet udp,
+
+  /etc/netfoil-hi/* r,
+  /etc/netfoil-hi/providers/ r,
+  /etc/netfoil-hi/providers/* r,
+  /etc/netfoil-hi/generic/ r,
+  /etc/netfoil-hi/generic/* r,
+  /etc/ssl/certs/ r,
+  /etc/ssl/certs/* r,
+  /usr/share/ca-certificates/mozilla/* r,
+
+  /run/credentials/netfoil-hi.service/* r,
+
+  /etc/resolv.conf r,
+  /etc/nsswitch.con r,
+  /etc/hosts r,
+
+  deny /** x,
+
+  @{PROC}/@{pid}/cgroup r,
+  @{PROC}/@{pid}/mountinfo r,
+  /sys/fs/cgroup/netfoil_hi.slice/netfoil-hi.service/cpu.max r,
+
+  # remove some of the defaults
+  deny ptrace,
+  deny unix,
+
+  deny /usr/lib** mrwlkx,
+
+  deny /etc/ld.** mrwlkx,
+  deny /etc/gcrypt/** mrwlkx,
+  deny /etc/crypto-policies/** mrwlkx,
+  deny /etc/gnutls/** mrwlkx,
+
+  deny /dev/full mrwlkx,
+  deny /dev/zero mrwlkx,
+
+  deny /home/** mrwlkx,
+  deny /root/** mrwlkx,
+
+  deny /opt** mrwlkx,
+}

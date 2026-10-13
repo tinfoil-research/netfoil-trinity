@@ -1,0 +1,6 @@
+[Unit]
+Description=Netfoil HTTPS Inspection
+Before=slices.target
+
+[Slice]
+#AllowedCPUs=

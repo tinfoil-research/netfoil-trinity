@@ -1,0 +1,131 @@
+[Unit]
+Description=Netfoil HTTPS Inspection
+After=network.target
+Requires=netfoil-hi.socket
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+DynamicUser=true
+
+Environment="GOMEMLIMIT=1024MiB"
+ExecStart=/usr/sbin/netfoil-hi --config-directory /etc/netfoil-hi --filter-system-calls
+
+BindReadOnlyPaths=/usr/sbin/netfoil-hi
+BindReadOnlyPaths=/etc/netfoil-hi
+BindReadOnlyPaths=/etc/ssl
+BindReadOnlyPaths=/lib64/ld-linux-x86-64.so.2
+# Ubuntu
+BindReadOnlyPaths=-/usr/share/ca-certificates/mozilla/
+# Fedora
+BindReadOnlyPaths=-/etc/pki/ca-trust/
+
+# DNS
+BindReadOnlyPaths=/etc/resolv.conf
+BindReadOnlyPaths=/etc/hosts
+
+BindReadOnlyPaths=/run/credentials/netfoil-hi.service/
+LoadCredentialEncrypted=netfoil-hi-ca:/etc/credstore.encrypted/netfoil-hi-ca
+
+# This is used to set firewall rules external to netfoil
+Slice=netfoil_hi.slice
+
+AmbientCapabilities=
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# List syscalls in the groups: systemd-analyze syscall-filter
+SystemCallArchitectures=native
+#SystemCallFilter=@basic-io @file-system @io-event @network-io @process @signal madvise setrlimit
+
+# @default - cannot disable? (14/63)
+#SystemCallFilter=arch_prctl rt_sigreturn sched_getaffinity sched_yield execve futex getpid getrandom getrlimit gettid mmap nanosleep
+
+# @basic-io (4/18)
+SystemCallFilter=close read write pread64
+
+# @file-system (5/88)
+SystemCallFilter=access fcntl fstat getdents64 openat readlinkat newfstatat
+
+# @network-io (9/22)
+SystemCallFilter=accept4 connect getpeername getsockname getsockopt recvfrom sendto setsockopt socket
+
+# @signal (3/14)
+SystemCallFilter=rt_sigaction rt_sigprocmask sigaltstack
+
+# @process (3/22)
+SystemCallFilter=clone prctl tgkill
+
+# @io-event (4/17)
+SystemCallFilter=epoll_create1 epoll_ctl epoll_pwait eventfd2
+
+# @system-service (1/45, also many groups included)
+SystemCallFilter=madvise uname
+
+# @resources (1/13)
+SystemCallFilter=setrlimit
+
+# Create /run/netfoil
+RuntimeDirectory=netfoil-hi
+RuntimeDirectoryMode=0700
+
+RootDirectory=/run/netfoil-hi
+
+RestrictAddressFamilies=AF_INET
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+# This might set AllowDevices=char-rtc r
+ProtectClock=yes
+
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+RemoveIPC=true
+UMask=0077
+
+# IPC namespace
+PrivateIPC=true
+
+# UTS namespace
+ProtectHostname=yes
+
+# Changes mounts (custom is more strict)
+# https://github.com/systemd/systemd/blob/main/src/core/namespace.c
+#
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectProc=invisible
+ProcSubset=pid
+ProtectSystem=strict
+PrivateTmp=true
+
+# seccomp _sysctl (custom filter does not allow it anyway)
+# /proc and /sys mounts (custom is more strict)
+ProtectKernelTunables=yes
+#
+# seccomp @raw-io (custom filter does not allow it anyway)
+PrivateDevices=true
+DevicePolicy=closed
+
+# It's disputed if user namespaces decrease or increase the risk, and it might not be available on all systems
+#PrivateUsers=true
+
+# Looks like there might be bug in old versions of systemd so that this is ignored
+SocketBindDeny=any
+
+# Probably too strict in general
+#RestrictNetworkInterfaces=
+
+CPUQuota=50%
+MemoryMax=1024M
+MemorySwapMax=0
+TasksMax=100
+
+[Install]
+WantedBy=multi-user.target

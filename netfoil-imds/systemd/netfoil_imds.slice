@@ -1,0 +1,6 @@
+[Unit]
+Description=Netfoil IMDS
+Before=slices.target
+
+[Slice]
+#AllowedCPUs=
