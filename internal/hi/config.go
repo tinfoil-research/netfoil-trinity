@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	EnableDebian bool
+	EnableUbuntu bool
 	EnableGitHub bool
 	EnableGo     bool
 }
@@ -42,6 +43,7 @@ type ConfigKey string
 
 const (
 	keyEnableDebian ConfigKey = "EnableDebian"
+	keyEnableUbuntu ConfigKey = "EnableUbuntu"
 	keyEnableGitHub ConfigKey = "EnableGitHub"
 	keyEnableGo     ConfigKey = "EnableGo"
 )
@@ -86,6 +88,7 @@ func (c *ConfigMap) getBool(key ConfigKey, defaultValue bool) (bool, error) {
 
 func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 	configMap := newConfigMap(keyEnableDebian,
+		keyEnableUbuntu,
 		keyEnableGitHub,
 		keyEnableGo,
 	)
@@ -130,6 +133,11 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		return nil, err
 	}
 
+	enableUbuntu, err := configMap.getBool(keyEnableUbuntu, false)
+	if err != nil {
+		return nil, err
+	}
+
 	enableGitHub, err := configMap.getBool(keyEnableGitHub, false)
 	if err != nil {
 		return nil, err
@@ -142,6 +150,7 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 
 	return &Config{
 		EnableDebian: enableDebian,
+		EnableUbuntu: enableUbuntu,
 		EnableGitHub: enableGitHub,
 		EnableGo:     enableGo,
 	}, nil

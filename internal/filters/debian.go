@@ -2,11 +2,18 @@ package filters
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/tinfoil-research/netfoil-trinity/internal/trie"
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
+
+var regexDebianPackageName = regexp.MustCompile("^[a-z0-9-]+$")
+
+// FIXME %
+var regexDebianFilename = regexp.MustCompile("^[a-z0-9_-]+(\\.[%a-z0-9_-]+)*\\.deb$")
+var regexDebianPath = regexp.MustCompile("^[a-zA-Z0-9-]+(/[a-zA-Z0-9-]+)*(\\.yml|\\.yml\\.gz|\\.xz|\\.tar\\.gz)?$")
 
 type DebianFilter struct {
 	packageTrie trie.Node
@@ -108,6 +115,10 @@ func (f *DebianFilter) Transform(r *http.Request) (*http.Request, bool) {
 
 func (f *DebianFilter) matchFixed(r *http.Request, distPrefix string) bool {
 	if after, ok := strings.CutPrefix(r.RequestURI, distPrefix); ok {
+		if !regexDebianPath.MatchString(after) {
+			return false
+		}
+
 		_, match := f.fixedTrie.Match([]byte(after))
 		if match {
 			return true
@@ -127,8 +138,13 @@ func (f *DebianFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 
 		leadingCharacter := parts[0]
 		packageName := parts[1]
+		file := parts[2]
 
 		if string(packageName[0]) != leadingCharacter {
+			return false
+		}
+
+		if !regexDebianPackageName.MatchString(packageName) {
 			return false
 		}
 
@@ -137,8 +153,7 @@ func (f *DebianFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 			return false
 		}
 
-		file := parts[2]
-		if !strings.HasSuffix(file, ".deb") {
+		if !regexDebianFilename.MatchString(file) {
 			return false
 		}
 

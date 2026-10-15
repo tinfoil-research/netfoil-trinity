@@ -69,6 +69,21 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 		filterMap["security.debian.org"] = debianFilter
 	}
 
+	if config.EnableUbuntu {
+		ubuntuConfig, err := readConfig(configDirectory, filepath.Join("providers", "ubuntu"))
+		if err != nil {
+			return nil, err
+		}
+
+		ubuntuFilter, err := filters.NewUbuntuFilter(ubuntuConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		filterMap["archive.ubuntu.com"] = ubuntuFilter
+		filterMap["security.ubuntu.com"] = ubuntuFilter
+	}
+
 	if config.EnableGitHub {
 		gitHubConfig, err := readConfig(configDirectory, filepath.Join("providers", "github"))
 		if err != nil {

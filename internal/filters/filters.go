@@ -2,9 +2,12 @@ package filters
 
 import (
 	"net/http"
+	"regexp"
 
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
+
+var regexCharacters = regexp.MustCompile("^[a-zA-Z]+$")
 
 type Filter interface {
 	Transform(*http.Request) (*http.Request, bool)
