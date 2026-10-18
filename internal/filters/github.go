@@ -52,6 +52,11 @@ func (f *GitHubFilter) Transform(r *http.Request) (*http.Request, bool) {
 	suffix := strings.Join(parts[3:], "/")
 
 	if suffix == "info/refs?service=git-upload-pack" && r.Method == string(verbs.GET) {
+		err := errOnNonEmptyBody(r)
+		if err != nil {
+			return nil, false
+		}
+
 		return r, true
 	}
 

@@ -25,6 +25,11 @@ func NewGoFilter(allowedPackages []string) (*GolangFilter, error) {
 }
 
 func (f *GolangFilter) Transform(r *http.Request) (*http.Request, bool) {
+	err := errOnNonEmptyBody(r)
+	if err != nil {
+		return nil, false
+	}
+
 	if r.Host == "proxy.golang.org" {
 		if r.RequestURI == "/sumdb/sum.golang.org/supported" && r.Method == "GET" {
 			return r, true

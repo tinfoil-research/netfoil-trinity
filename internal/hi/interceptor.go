@@ -84,6 +84,20 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 		filterMap["security.ubuntu.com"] = ubuntuFilter
 	}
 
+	if config.EnableFedora {
+		fedoraConfig, err := readConfig(configDirectory, filepath.Join("providers", "fedora"))
+		if err != nil {
+			return nil, err
+		}
+
+		fedoraFilter, err := filters.NewFedoraFilter(fedoraConfig, config.FedoraRepoPrefix)
+		if err != nil {
+			return nil, err
+		}
+
+		filterMap[config.FedoraRepoPrefix.Host] = fedoraFilter
+	}
+
 	if config.EnableGitHub {
 		gitHubConfig, err := readConfig(configDirectory, filepath.Join("providers", "github"))
 		if err != nil {
@@ -111,6 +125,22 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 
 		filterMap["proxy.golang.org"] = goFilter
 		filterMap["sum.golang.org"] = goFilter
+	}
+
+	if config.EnableDocker {
+		dockerConfig, err := readConfig(configDirectory, filepath.Join("providers", "docker"))
+		if err != nil {
+			return nil, err
+		}
+
+		dockerFilter, err := filters.NewDockerFilter(dockerConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		filterMap["registry-1.docker.io"] = dockerFilter
+		filterMap["auth.docker.io"] = dockerFilter
+		filterMap["production.cloudfront.docker.com"] = dockerFilter
 	}
 
 	m, err := filters.LoadAllGeneric(configDirectory)

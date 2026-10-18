@@ -43,20 +43,20 @@ func NewDebianFilter(allowedPackages []string) (*DebianFilter, error) {
 
 		"main/i18n/Translation-en",
 		"main/i18n/Translation-en.xz",
+		"main/i18n/by-hash/SHA256/*",
 		"non-free-firmware/i18n/Translation-en",
 		"non-free-firmware/i18n/Translation-en.xz",
-		"main/i18n/by-hash/SHA256/*",
 		"non-free-firmware/i18n/by-hash/SHA256/*",
 
 		"main/dep11/Components-amd64.yml",
 		"main/dep11/Components-amd64.yml.gz",
 		"main/dep11/icons-48x48.tar.gz",
 		"main/dep11/icons-64x64.tar.gz",
+		"main/dep11/by-hash/SHA256/*",
 		"non-free-firmware/dep11/Components-amd64.yml",
 		"non-free-firmware/dep11/Components-amd64.yml.gz",
 		"non-free-firmware/dep11/icons-48x48.tar.gz",
 		"non-free-firmware/dep11/icons-64x64.tar.gz",
-		"main/dep11/by-hash/SHA256/*",
 		"non-free-firmware/dep11/by-hash/SHA256/*",
 	}
 
@@ -75,6 +75,11 @@ func NewDebianFilter(allowedPackages []string) (*DebianFilter, error) {
 }
 
 func (f *DebianFilter) Transform(r *http.Request) (*http.Request, bool) {
+	err := errOnNonEmptyBody(r)
+	if err != nil {
+		return nil, false
+	}
+
 	if r.Host == "security.debian.org" {
 		if r.Method != string(verbs.GET) {
 			return nil, false

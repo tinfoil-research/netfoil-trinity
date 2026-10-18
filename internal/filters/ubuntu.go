@@ -27,6 +27,13 @@ func NewUbuntuFilter(allowedPackages []string) (*UbuntuFilter, error) {
 
 	fixedList := []string{
 		"InRelease",
+
+		"main/binary-amd64/by-hash/SHA256/*",
+		"main/dep11/by-hash/SHA256/*",
+
+		"universe/binary-amd64/by-hash/SHA256/*",
+		"universe/i18n/by-hash/SHA256/*",
+		"universe/dep11/by-hash/SHA256/*",
 	}
 
 	fixedTrie := trie.Node{}
@@ -44,6 +51,11 @@ func NewUbuntuFilter(allowedPackages []string) (*UbuntuFilter, error) {
 }
 
 func (f *UbuntuFilter) Transform(r *http.Request) (*http.Request, bool) {
+	err := errOnNonEmptyBody(r)
+	if err != nil {
+		return nil, false
+	}
+
 	if r.Host == "security.ubuntu.com" {
 		if r.Method != string(verbs.GET) {
 			return nil, false
@@ -89,7 +101,7 @@ func (f *UbuntuFilter) Transform(r *http.Request) (*http.Request, bool) {
 
 func (f *UbuntuFilter) matchFixed(r *http.Request, distPrefix string) bool {
 	if after, ok := strings.CutPrefix(r.RequestURI, distPrefix); ok {
-		if !regexCharacters.MatchString(after) {
+		if !regexDebianPath.MatchString(after) {
 			return false
 		}
 

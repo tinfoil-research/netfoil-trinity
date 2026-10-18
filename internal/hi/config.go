@@ -3,6 +3,7 @@ package hi
 import (
 	"bufio"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,10 +11,13 @@ import (
 )
 
 type Config struct {
-	EnableDebian bool
-	EnableUbuntu bool
-	EnableGitHub bool
-	EnableGo     bool
+	EnableDebian     bool
+	EnableUbuntu     bool
+	EnableFedora     bool
+	FedoraRepoPrefix *url.URL
+	EnableGitHub     bool
+	EnableGo         bool
+	EnableDocker     bool
 }
 
 func ReadConfigFile(configDirectory string) (*Config, error) {
@@ -42,10 +46,13 @@ func ReadConfigFile(configDirectory string) (*Config, error) {
 type ConfigKey string
 
 const (
-	keyEnableDebian ConfigKey = "EnableDebian"
-	keyEnableUbuntu ConfigKey = "EnableUbuntu"
-	keyEnableGitHub ConfigKey = "EnableGitHub"
-	keyEnableGo     ConfigKey = "EnableGo"
+	keyEnableDebian     ConfigKey = "EnableDebian"
+	keyEnableUbuntu     ConfigKey = "EnableUbuntu"
+	keyEnableFedora     ConfigKey = "EnableFedora"
+	keyFedoraRepoPrefix ConfigKey = "FedoraRepoPrefix"
+	keyEnableGitHub     ConfigKey = "EnableGitHub"
+	keyEnableGo         ConfigKey = "EnableGo"
+	keyEnableDocker     ConfigKey = "EnableDocker"
 )
 
 type ConfigMap struct {
@@ -86,11 +93,28 @@ func (c *ConfigMap) getBool(key ConfigKey, defaultValue bool) (bool, error) {
 	return result, nil
 }
 
+func (c *ConfigMap) getUrl(key ConfigKey, defaultValue string) (*url.URL, error) {
+	stringValue, found := c.m[key]
+	if !found || stringValue == "" {
+		return nil, nil
+	}
+
+	u, err := url.Parse(stringValue)
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
+}
+
 func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 	configMap := newConfigMap(keyEnableDebian,
 		keyEnableUbuntu,
+		keyEnableFedora,
+		keyFedoraRepoPrefix,
 		keyEnableGitHub,
 		keyEnableGo,
+		keyEnableDocker,
 	)
 
 	for scanner.Scan() {
@@ -138,6 +162,19 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		return nil, err
 	}
 
+	enableFedora, err := configMap.getBool(keyEnableFedora, false)
+	if err != nil {
+		return nil, err
+	}
+
+	fedoraRepoPrefix, err := configMap.getUrl(keyFedoraRepoPrefix, "")
+	if err != nil {
+		return nil, err
+	}
+	if enableFedora && fedoraRepoPrefix == nil {
+		return nil, fmt.Errorf("FedoraRepoPrefix missing")
+	}
+
 	enableGitHub, err := configMap.getBool(keyEnableGitHub, false)
 	if err != nil {
 		return nil, err
@@ -148,11 +185,19 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		return nil, err
 	}
 
+	enableDocker, err := configMap.getBool(keyEnableDocker, false)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
-		EnableDebian: enableDebian,
-		EnableUbuntu: enableUbuntu,
-		EnableGitHub: enableGitHub,
-		EnableGo:     enableGo,
+		EnableDebian:     enableDebian,
+		EnableUbuntu:     enableUbuntu,
+		EnableFedora:     enableFedora,
+		FedoraRepoPrefix: fedoraRepoPrefix,
+		EnableGitHub:     enableGitHub,
+		EnableGo:         enableGo,
+		EnableDocker:     enableDocker,
 	}, nil
 }
 
