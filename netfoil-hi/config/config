@@ -1,3 +1,8 @@
 # EnableDebian=false
+# EnableUbuntu=false
+# EnableFedora=false
+# FedoraRepoPrefix=
+
 # EnableGitHub=false
 # EnableGo=false
+# EnableDocker=false

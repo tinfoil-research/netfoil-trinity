@@ -2,15 +2,28 @@ package filters
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/tinfoil-research/netfoil-trinity/internal/trie"
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
 
+var regexDebianPackageName = regexp.MustCompile("^[a-z0-9-]+$")
+
+// FIXME %
+var regexDebianFilename = regexp.MustCompile("^[a-z0-9_-]+(\\.[%a-z0-9_-]+)*\\.deb$")
+var regexDebianPath = regexp.MustCompile("^[a-zA-Z0-9-]+(/[a-zA-Z0-9-]+)*(\\.yml|\\.yml\\.gz|\\.xz|\\.tar\\.gz)?$")
+
+var regexDebianHeaderIfModifiedSince = regexp.MustCompile("^[a-zA-Z0-9,: ]+$")
+var regexDebianHeaderUserAgent = regexp.MustCompile("^[a-zA-Z0-9.: /()_-]+$")
+var regexDebianHeaderCacheControl = regexp.MustCompile("^max-age=0$")
+var regexDebianHeaderAccept = regexp.MustCompile("^text/\\*$")
+
 type DebianFilter struct {
-	packageTrie trie.Node
-	fixedTrie   trie.Node
+	packageTrie    trie.Node
+	fixedTrie      trie.Node
+	allowedHeaders map[string]*regexp.Regexp
 }
 
 func NewDebianFilter(allowedPackages []string) (*DebianFilter, error) {
@@ -36,20 +49,20 @@ func NewDebianFilter(allowedPackages []string) (*DebianFilter, error) {
 
 		"main/i18n/Translation-en",
 		"main/i18n/Translation-en.xz",
+		"main/i18n/by-hash/SHA256/*",
 		"non-free-firmware/i18n/Translation-en",
 		"non-free-firmware/i18n/Translation-en.xz",
-		"main/i18n/by-hash/SHA256/*",
 		"non-free-firmware/i18n/by-hash/SHA256/*",
 
 		"main/dep11/Components-amd64.yml",
 		"main/dep11/Components-amd64.yml.gz",
 		"main/dep11/icons-48x48.tar.gz",
 		"main/dep11/icons-64x64.tar.gz",
+		"main/dep11/by-hash/SHA256/*",
 		"non-free-firmware/dep11/Components-amd64.yml",
 		"non-free-firmware/dep11/Components-amd64.yml.gz",
 		"non-free-firmware/dep11/icons-48x48.tar.gz",
 		"non-free-firmware/dep11/icons-64x64.tar.gz",
-		"main/dep11/by-hash/SHA256/*",
 		"non-free-firmware/dep11/by-hash/SHA256/*",
 	}
 
@@ -61,13 +74,33 @@ func NewDebianFilter(allowedPackages []string) (*DebianFilter, error) {
 		}
 	}
 
+	allowedHeaders := debianAllowedHeaders()
 	return &DebianFilter{
-		packageTrie: packageTrie,
-		fixedTrie:   fixedTrie,
+		packageTrie:    packageTrie,
+		fixedTrie:      fixedTrie,
+		allowedHeaders: allowedHeaders,
 	}, nil
 }
 
+func debianAllowedHeaders() map[string]*regexp.Regexp {
+	allowedHeaders := make(map[string]*regexp.Regexp)
+	allowedHeaders["If-Modified-Since"] = regexDebianHeaderIfModifiedSince
+	allowedHeaders["User-Agent"] = regexDebianHeaderUserAgent
+	allowedHeaders["Cache-Control"] = regexDebianHeaderCacheControl
+	allowedHeaders["Accept"] = regexDebianHeaderAccept
+	return allowedHeaders
+}
+
 func (f *DebianFilter) Transform(r *http.Request) (*http.Request, bool) {
+	err := errOnNonEmptyBody(r)
+	if err != nil {
+		return nil, false
+	}
+
+	if !verifyHeaders(r, f.allowedHeaders) {
+		return r, false
+	}
+
 	if r.Host == "security.debian.org" {
 		if r.Method != string(verbs.GET) {
 			return nil, false
@@ -106,8 +139,31 @@ func (f *DebianFilter) Transform(r *http.Request) (*http.Request, bool) {
 	return nil, false
 }
 
+func verifyHeaders(r *http.Request, allowedHeaders map[string]*regexp.Regexp) bool {
+	for k, v := range r.Header {
+		if len(v) != 1 {
+			return false
+		}
+
+		regex, found := allowedHeaders[k]
+		if !found {
+			return false
+		}
+
+		if !regex.MatchString(v[0]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (f *DebianFilter) matchFixed(r *http.Request, distPrefix string) bool {
 	if after, ok := strings.CutPrefix(r.RequestURI, distPrefix); ok {
+		if !regexDebianPath.MatchString(after) {
+			return false
+		}
+
 		_, match := f.fixedTrie.Match([]byte(after))
 		if match {
 			return true
@@ -127,8 +183,13 @@ func (f *DebianFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 
 		leadingCharacter := parts[0]
 		packageName := parts[1]
+		file := parts[2]
 
 		if string(packageName[0]) != leadingCharacter {
+			return false
+		}
+
+		if !regexDebianPackageName.MatchString(packageName) {
 			return false
 		}
 
@@ -137,8 +198,7 @@ func (f *DebianFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 			return false
 		}
 
-		file := parts[2]
-		if !strings.HasSuffix(file, ".deb") {
+		if !regexDebianFilename.MatchString(file) {
 			return false
 		}
 
