@@ -17,8 +17,16 @@ var regexDockerSignature = regexp.MustCompile("^[a-zA-Z0-9~_-]+$")
 var regexDockerKeyPairID = regexp.MustCompile("^[A-Z0-9]+$")
 var regexSHA256 = regexp.MustCompile("^[a-f0-9]{64}$")
 
+var regexDockerHeaderUserAgent = regexp.MustCompile("^[a-zA-Z0-9/:.+ ()_\\\\-]+$")
+var regexDockerHeaderAccept = regexp.MustCompile("^([a-z0-9/.-]+\\+(json|gzip)|\\*/\\*)$")
+var regexDockerHeaderBaggage = regexp.MustCompile("^trigger=api$")
+var regexDockerHeaderAcceptEncoding = regexp.MustCompile("^[a-z0-9;=., ]+$")
+var regexDockerHeaderAuthorization = regexp.MustCompile("^Bearer [a-zA-Z0-9._-]+$")
+var regexDockerHeaderReferer = regexp.MustCompile("^https://registry-1\\.docker\\.io/v2/library/[a-z0-9-]+/blobs/sha256:[a-f0-9]{64}$")
+
 type DockerFilter struct {
-	imageTrie trie.Node
+	imageTrie      trie.Node
+	allowedHeaders map[string]*regexp.Regexp
 }
 
 func NewDockerFilter(allowedImages []string) (*DockerFilter, error) {
@@ -30,14 +38,60 @@ func NewDockerFilter(allowedImages []string) (*DockerFilter, error) {
 		}
 	}
 
+	allowedHeaders := dockerAllowedHeaders()
 	return &DockerFilter{
-		imageTrie: imageTrie,
+		imageTrie:      imageTrie,
+		allowedHeaders: allowedHeaders,
 	}, nil
+}
+
+func dockerAllowedHeaders() map[string]*regexp.Regexp {
+	allowedHeaders := make(map[string]*regexp.Regexp)
+	allowedHeaders["User-Agent"] = regexDockerHeaderUserAgent
+	allowedHeaders["Accept"] = regexDockerHeaderAccept
+	allowedHeaders["Baggage"] = regexDockerHeaderBaggage
+	allowedHeaders["Accept-Encoding"] = regexDockerHeaderAcceptEncoding
+	allowedHeaders["Authorization"] = regexDockerHeaderAuthorization
+	allowedHeaders["Referer"] = regexDockerHeaderReferer
+	return allowedHeaders
+}
+
+func verifyDockerHeaders(r *http.Request, allowedHeaders map[string]*regexp.Regexp) bool {
+	for k, v := range r.Header {
+		regex, found := allowedHeaders[k]
+		if !found {
+			return false
+		}
+
+		if len(v) != 1 {
+			return false
+		}
+
+		if k == "Accept" {
+			parts := strings.Split(v[0], ", ")
+			for _, p := range parts {
+				if !regex.MatchString(p) {
+					return false
+				}
+			}
+		} else {
+			if !regex.MatchString(v[0]) {
+				return false
+			}
+		}
+
+	}
+
+	return true
 }
 
 func (f *DockerFilter) Transform(r *http.Request) (*http.Request, bool) {
 	err := errOnNonEmptyBody(r)
 	if err != nil {
+		return nil, false
+	}
+
+	if !verifyDockerHeaders(r, f.allowedHeaders) {
 		return nil, false
 	}
 

@@ -18,11 +18,17 @@ var regexFedoraPackageName = regexp.MustCompile("^[a-zA-Z0-9+_-]+(\\.[a-zA-Z0-9+
 var regexFedoraPart2 = regexp.MustCompile("^[0-9a-z+^]+(\\.[0-9a-z+^]+)*")
 var regexFedoraPart3 = regexp.MustCompile("^[0-9a-z]+\\.fc44\\.(x86_64|noarch)\\.rpm|$")
 
+var regexFedoraHeaderCacheControl = regexp.MustCompile("^no-cache$")
+var regexFedoraHeaderPragma = regexp.MustCompile("^no-cache$")
+var regexFedoraHeaderUserAgent = regexp.MustCompile("^[a-zA-Z0-9.; ()_]+$")
+var regexFedoraHeaderAccept = regexp.MustCompile("^\\*/\\*$")
+
 type FedoraFilter struct {
-	host        string
-	pathPrefix  string
-	packageTrie trie.Node
-	fixedTrie   trie.Node
+	host           string
+	pathPrefix     string
+	packageTrie    trie.Node
+	fixedTrie      trie.Node
+	allowedHeaders map[string]*regexp.Regexp
 }
 
 func NewFedoraFilter(allowedPackages []string, repoPrefix *url.URL) (*FedoraFilter, error) {
@@ -58,18 +64,33 @@ func NewFedoraFilter(allowedPackages []string, repoPrefix *url.URL) (*FedoraFilt
 		}
 	}
 
+	allowedHeaders := fedoraAllowedHeaders()
 	return &FedoraFilter{
-		host:        repoPrefix.Host,
-		pathPrefix:  repoPrefix.Path,
-		packageTrie: packageTrie,
-		fixedTrie:   fixedTrie,
+		host:           repoPrefix.Host,
+		pathPrefix:     repoPrefix.Path,
+		packageTrie:    packageTrie,
+		fixedTrie:      fixedTrie,
+		allowedHeaders: allowedHeaders,
 	}, nil
+}
+
+func fedoraAllowedHeaders() map[string]*regexp.Regexp {
+	allowedHeaders := make(map[string]*regexp.Regexp)
+	allowedHeaders["Cache-Control"] = regexFedoraHeaderCacheControl
+	allowedHeaders["Pragma"] = regexFedoraHeaderPragma
+	allowedHeaders["User-Agent"] = regexFedoraHeaderUserAgent
+	allowedHeaders["Accept"] = regexFedoraHeaderAccept
+	return allowedHeaders
 }
 
 func (f *FedoraFilter) Transform(r *http.Request) (*http.Request, bool) {
 	err := errOnNonEmptyBody(r)
 	if err != nil {
 		return nil, false
+	}
+
+	if !verifyHeaders(r, f.allowedHeaders) {
+		return r, false
 	}
 
 	if r.Host == f.host {

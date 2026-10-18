@@ -9,11 +9,10 @@ import (
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
 
-var regexUbuntuFilename = regexp.MustCompile("^[a-z0-9_-]+(\\.[a-z0-9_-]+)*\\.deb$")
-
 type UbuntuFilter struct {
-	packageTrie trie.Node
-	fixedTrie   trie.Node
+	packageTrie    trie.Node
+	fixedTrie      trie.Node
+	allowedHeaders map[string]*regexp.Regexp
 }
 
 func NewUbuntuFilter(allowedPackages []string) (*UbuntuFilter, error) {
@@ -44,9 +43,11 @@ func NewUbuntuFilter(allowedPackages []string) (*UbuntuFilter, error) {
 		}
 	}
 
+	allowedHeaders := debianAllowedHeaders()
 	return &UbuntuFilter{
-		packageTrie: packageTrie,
-		fixedTrie:   fixedTrie,
+		packageTrie:    packageTrie,
+		fixedTrie:      fixedTrie,
+		allowedHeaders: allowedHeaders,
 	}, nil
 }
 
@@ -54,6 +55,10 @@ func (f *UbuntuFilter) Transform(r *http.Request) (*http.Request, bool) {
 	err := errOnNonEmptyBody(r)
 	if err != nil {
 		return nil, false
+	}
+
+	if !verifyHeaders(r, f.allowedHeaders) {
+		return r, false
 	}
 
 	if r.Host == "security.ubuntu.com" {
@@ -139,7 +144,7 @@ func (f *UbuntuFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 			return false
 		}
 
-		if !regexUbuntuFilename.MatchString(file) {
+		if !regexDebianFilename.MatchString(file) {
 			return false
 		}
 

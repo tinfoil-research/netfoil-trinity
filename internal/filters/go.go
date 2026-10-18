@@ -2,14 +2,23 @@ package filters
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/tinfoil-research/netfoil-trinity/internal/trie"
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
 
+var regexGoPackageName = regexp.MustCompile("^[a-z0-9]+([./][a-z0-9]+)*$")
+var regexGoVersion = regexp.MustCompile("^v[0-9]+(\\.[0-9]+)*(-[0-9]{14}-[a-f0-9]{12})?$")
+var regexGoTilePath = regexp.MustCompile("^/tile/[0-9]/[0-9](/x[0-9]+)?(/[a-z0-9]+\\.p)?/[0-9]+$")
+
+var regexGoHeaderUserAgent = regexp.MustCompile("^[a-zA-Z0-9/:.+ ()-]+$")
+var regexGoHeaderAcceptEncoding = regexp.MustCompile("^gzip$")
+
 type GolangFilter struct {
-	trie trie.Node
+	trie           trie.Node
+	allowedHeaders map[string]*regexp.Regexp
 }
 
 func NewGoFilter(allowedPackages []string) (*GolangFilter, error) {
@@ -21,13 +30,29 @@ func NewGoFilter(allowedPackages []string) (*GolangFilter, error) {
 		}
 	}
 
-	return &GolangFilter{trie: t}, nil
+	allowedHeaders := goAllowedHeaders()
+	return &GolangFilter{
+		trie:           t,
+		allowedHeaders: allowedHeaders,
+	}, nil
+}
+
+func goAllowedHeaders() map[string]*regexp.Regexp {
+	allowedHeaders := make(map[string]*regexp.Regexp)
+	allowedHeaders["User-Agent"] = regexGoHeaderUserAgent
+	allowedHeaders["Accept-Encoding"] = regexGoHeaderAcceptEncoding
+
+	return allowedHeaders
 }
 
 func (f *GolangFilter) Transform(r *http.Request) (*http.Request, bool) {
 	err := errOnNonEmptyBody(r)
 	if err != nil {
 		return nil, false
+	}
+
+	if !verifyHeaders(r, f.allowedHeaders) {
+		return r, false
 	}
 
 	if r.Host == "proxy.golang.org" {
@@ -38,6 +63,10 @@ func (f *GolangFilter) Transform(r *http.Request) (*http.Request, bool) {
 		parts := strings.Split(r.RequestURI, "/")
 
 		if len(parts) < 4 {
+			return nil, false
+		}
+
+		if parts[0] != "" {
 			return nil, false
 		}
 
@@ -53,6 +82,10 @@ func (f *GolangFilter) Transform(r *http.Request) (*http.Request, bool) {
 		}
 
 		packageName := strings.Join(parts[1:len(parts)-2], "/")
+		if !regexGoPackageName.MatchString(packageName) {
+			return nil, false
+		}
+
 		_, found := f.trie.Match([]byte(packageName))
 		if !found {
 			return nil, false
@@ -63,6 +96,9 @@ func (f *GolangFilter) Transform(r *http.Request) (*http.Request, bool) {
 		}
 	} else if r.Host == "sum.golang.org" {
 		if strings.HasPrefix(r.RequestURI, "/tile/") && r.Method == "GET" {
+			if !regexGoTilePath.MatchString(r.RequestURI) {
+				return nil, false
+			}
 			return r, true
 		}
 
@@ -77,6 +113,11 @@ func (f *GolangFilter) Transform(r *http.Request) (*http.Request, bool) {
 			packageName := parts[0]
 			_, found := f.trie.Match([]byte(packageName))
 			if !found {
+				return nil, false
+			}
+
+			version := parts[1]
+			if !regexGoVersion.MatchString(version) {
 				return nil, false
 			}
 

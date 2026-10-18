@@ -40,3 +40,23 @@ func TestVerifyCloudfront(t *testing.T) {
 		t.Errorf("should verify")
 	}
 }
+
+func TestHeaderAccept(t *testing.T) {
+	if !regexDockerHeaderAccept.MatchString("application/vnd.docker.distribution.manifest.v2+json") {
+		t.Errorf("should match")
+	}
+
+	if !regexDockerHeaderAccept.MatchString("application/vnd.in-toto+json") {
+		t.Errorf("should match")
+	}
+
+	if !regexDockerHeaderAccept.MatchString("*/*") {
+		t.Errorf("should match")
+	}
+}
+
+func TestHeaderReferer(t *testing.T) {
+	if !regexDockerHeaderReferer.MatchString("https://registry-1.docker.io/v2/library/ubuntu/blobs/sha256:abcdef0000000000000000000000000000000000000000000000000000000000") {
+		t.Errorf("should match")
+	}
+}

@@ -15,9 +15,15 @@ var regexDebianPackageName = regexp.MustCompile("^[a-z0-9-]+$")
 var regexDebianFilename = regexp.MustCompile("^[a-z0-9_-]+(\\.[%a-z0-9_-]+)*\\.deb$")
 var regexDebianPath = regexp.MustCompile("^[a-zA-Z0-9-]+(/[a-zA-Z0-9-]+)*(\\.yml|\\.yml\\.gz|\\.xz|\\.tar\\.gz)?$")
 
+var regexDebianHeaderIfModifiedSince = regexp.MustCompile("^[a-zA-Z0-9,: ]+$")
+var regexDebianHeaderUserAgent = regexp.MustCompile("^[a-zA-Z0-9.: /()_-]+$")
+var regexDebianHeaderCacheControl = regexp.MustCompile("^max-age=0$")
+var regexDebianHeaderAccept = regexp.MustCompile("^text/\\*$")
+
 type DebianFilter struct {
-	packageTrie trie.Node
-	fixedTrie   trie.Node
+	packageTrie    trie.Node
+	fixedTrie      trie.Node
+	allowedHeaders map[string]*regexp.Regexp
 }
 
 func NewDebianFilter(allowedPackages []string) (*DebianFilter, error) {
@@ -68,16 +74,31 @@ func NewDebianFilter(allowedPackages []string) (*DebianFilter, error) {
 		}
 	}
 
+	allowedHeaders := debianAllowedHeaders()
 	return &DebianFilter{
-		packageTrie: packageTrie,
-		fixedTrie:   fixedTrie,
+		packageTrie:    packageTrie,
+		fixedTrie:      fixedTrie,
+		allowedHeaders: allowedHeaders,
 	}, nil
+}
+
+func debianAllowedHeaders() map[string]*regexp.Regexp {
+	allowedHeaders := make(map[string]*regexp.Regexp)
+	allowedHeaders["If-Modified-Since"] = regexDebianHeaderIfModifiedSince
+	allowedHeaders["User-Agent"] = regexDebianHeaderUserAgent
+	allowedHeaders["Cache-Control"] = regexDebianHeaderCacheControl
+	allowedHeaders["Accept"] = regexDebianHeaderAccept
+	return allowedHeaders
 }
 
 func (f *DebianFilter) Transform(r *http.Request) (*http.Request, bool) {
 	err := errOnNonEmptyBody(r)
 	if err != nil {
 		return nil, false
+	}
+
+	if !verifyHeaders(r, f.allowedHeaders) {
+		return r, false
 	}
 
 	if r.Host == "security.debian.org" {
@@ -116,6 +137,25 @@ func (f *DebianFilter) Transform(r *http.Request) (*http.Request, bool) {
 	}
 
 	return nil, false
+}
+
+func verifyHeaders(r *http.Request, allowedHeaders map[string]*regexp.Regexp) bool {
+	for k, v := range r.Header {
+		if len(v) != 1 {
+			return false
+		}
+
+		regex, found := allowedHeaders[k]
+		if !found {
+			return false
+		}
+
+		if !regex.MatchString(v[0]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (f *DebianFilter) matchFixed(r *http.Request, distPrefix string) bool {
