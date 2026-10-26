@@ -10,7 +10,7 @@ fi
 
 echo "instance $instance"
 
-CONFIG_DIRECTORY="/etc/netfoil-hi/$instance"
+CONFIG_DIRECTORY="/etc/netfoil/hi/$instance"
 mkdir -p "${CONFIG_DIRECTORY}"
 mkdir -p "${CONFIG_DIRECTORY}/generic"
 cp -r --update=none config/* "${CONFIG_DIRECTORY}"

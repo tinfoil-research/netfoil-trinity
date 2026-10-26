@@ -8,12 +8,12 @@ include <tunables/global>
   network inet tcp,
   network inet udp,
 
-  /etc/netfoil-hi/** r,
+  /etc/netfoil/hi/** r,
   /etc/ssl/certs/ r,
   /etc/ssl/certs/* r,
   /usr/share/ca-certificates/mozilla/* r,
 
-  /run/credentials/netfoil-hi*.service/* r,
+  /run/credentials/netfoil-hi@*.service/* r,
 
   /etc/resolv.conf r,
   /etc/nsswitch.con r,

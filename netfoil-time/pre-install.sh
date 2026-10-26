@@ -10,6 +10,6 @@ fi
 
 echo "instance $instance"
 
-CONFIG_DIRECTORY="/etc/netfoil-time/$instance"
+CONFIG_DIRECTORY="/etc/netfoil/time/$instance"
 mkdir -p "${CONFIG_DIRECTORY}"
 cp --update=none config/* "${CONFIG_DIRECTORY}"
