@@ -8,7 +8,7 @@ include <tunables/global>
 
   network inet udp,
 
-  /etc/netfoil-time/** r,
+  /etc/netfoil/time/** r,
 
   deny /** x,
 

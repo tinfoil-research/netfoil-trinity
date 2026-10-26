@@ -10,10 +10,10 @@ RestartSec=5
 DynamicUser=true
 
 Environment="GOMEMLIMIT=20MiB"
-ExecStart=/usr/sbin/netfoil-time --config-directory /etc/netfoil-time/%i --filter-system-calls
+ExecStart=/usr/sbin/netfoil-time --config-directory /etc/netfoil/time/%i --filter-system-calls
 
 BindReadOnlyPaths=/usr/sbin/netfoil-time
-BindReadOnlyPaths=/etc/netfoil-time
+BindReadOnlyPaths=/etc/netfoil/time
 BindReadOnlyPaths=/etc/ssl
 BindReadOnlyPaths=/lib64/ld-linux-x86-64.so.2
 # Ubuntu

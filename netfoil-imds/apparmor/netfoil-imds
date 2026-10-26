@@ -7,7 +7,7 @@ include <tunables/global>
   include <abstractions/base>
   network inet tcp,
 
-  /etc/netfoil-imds/** r,
+  /etc/netfoil/imds/** r,
 
   deny /** x,
 

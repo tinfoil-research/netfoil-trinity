@@ -10,6 +10,6 @@ fi
 
 echo "instance $instance"
 
-CONFIG_DIRECTORY="/etc/netfoil-imds/$instance"
+CONFIG_DIRECTORY="/etc/netfoil/imds/$instance"
 mkdir -p "${CONFIG_DIRECTORY}"
 cp --update=none config/* "${CONFIG_DIRECTORY}"

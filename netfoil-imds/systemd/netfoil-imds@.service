@@ -10,10 +10,10 @@ RestartSec=5
 DynamicUser=true
 
 Environment="GOMEMLIMIT=20MiB"
-ExecStart=/usr/sbin/netfoil-imds --config-directory /etc/netfoil-imds/%i --filter-system-calls
+ExecStart=/usr/sbin/netfoil-imds --config-directory /etc/netfoil/imds/%i --filter-system-calls
 
 BindReadOnlyPaths=/usr/sbin/netfoil-imds
-BindReadOnlyPaths=/etc/netfoil-imds
+BindReadOnlyPaths=/etc/netfoil/imds
 BindReadOnlyPaths=/etc/ssl
 BindReadOnlyPaths=/lib64/ld-linux-x86-64.so.2
 # Ubuntu
