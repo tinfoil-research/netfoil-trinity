@@ -1,7 +1,7 @@
 [Unit]
 Description=Netfoil HTTPS Inspection
 After=network.target
-Requires=netfoil-hi.socket
+Requires=netfoil-hi-%i.socket
 
 [Service]
 Type=simple
@@ -10,7 +10,7 @@ RestartSec=5
 DynamicUser=true
 
 Environment="GOMEMLIMIT=1024MiB"
-ExecStart=/usr/sbin/netfoil-hi --config-directory /etc/netfoil-hi --filter-system-calls
+ExecStart=/usr/sbin/netfoil-hi --config-directory /etc/netfoil-hi/%i --ca-key netfoil-hi-%i-ca --filter-system-calls
 
 BindReadOnlyPaths=/usr/sbin/netfoil-hi
 BindReadOnlyPaths=/etc/netfoil-hi
@@ -25,11 +25,11 @@ BindReadOnlyPaths=-/etc/pki/ca-trust/
 BindReadOnlyPaths=/etc/resolv.conf
 BindReadOnlyPaths=/etc/hosts
 
-BindReadOnlyPaths=/run/credentials/netfoil-hi.service/
-LoadCredentialEncrypted=netfoil-hi-ca:/etc/credstore.encrypted/netfoil-hi-ca
+BindReadOnlyPaths=/run/credentials/netfoil-hi@%i.service/
+LoadCredentialEncrypted=netfoil-hi-%i-ca:/etc/credstore.encrypted/netfoil-hi-%i-ca
 
 # This is used to set firewall rules external to netfoil
-Slice=netfoil_hi.slice
+Slice=netfoil_%i-hi.slice
 
 AmbientCapabilities=
 CapabilityBoundingSet=

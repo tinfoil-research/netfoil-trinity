@@ -1,7 +1,7 @@
 [Unit]
-Description=Netfoil IMDS
+Description=Netfoil Time
 After=network.target
-Requires=netfoil-imds.socket
+Requires=netfoil-time-%i.socket
 
 [Service]
 Type=simple
@@ -10,10 +10,10 @@ RestartSec=5
 DynamicUser=true
 
 Environment="GOMEMLIMIT=20MiB"
-ExecStart=/usr/sbin/netfoil-imds --config-directory /etc/netfoil-imds --filter-system-calls
+ExecStart=/usr/sbin/netfoil-time --config-directory /etc/netfoil-time/%i --filter-system-calls
 
-BindReadOnlyPaths=/usr/sbin/netfoil-imds
-BindReadOnlyPaths=/etc/netfoil-imds
+BindReadOnlyPaths=/usr/sbin/netfoil-time
+BindReadOnlyPaths=/etc/netfoil-time
 BindReadOnlyPaths=/etc/ssl
 BindReadOnlyPaths=/lib64/ld-linux-x86-64.so.2
 # Ubuntu
@@ -22,7 +22,7 @@ BindReadOnlyPaths=-/usr/share/ca-certificates/mozilla/
 BindReadOnlyPaths=-/etc/pki/ca-trust/
 
 # This is used to set firewall rules external to netfoil
-Slice=netfoil_imds.slice
+Slice=netfoil_%i-time.slice
 
 AmbientCapabilities=
 CapabilityBoundingSet=
@@ -60,10 +60,10 @@ SystemCallFilter=madvise
 SystemCallFilter=setrlimit
 
 # Create /run/netfoil
-RuntimeDirectory=netfoil-imds
+RuntimeDirectory=netfoil-time
 RuntimeDirectoryMode=0700
 
-RootDirectory=/run/netfoil-imds
+RootDirectory=/run/netfoil-time
 
 RestrictAddressFamilies=none
 RestrictNamespaces=yes
