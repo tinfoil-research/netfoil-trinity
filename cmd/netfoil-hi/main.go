@@ -29,6 +29,9 @@ OPTIONS
         --config-directory
             Config directory (default: /etc/netfoil-imds).
 
+        --ca-key
+            Name of systemd credential with CA key
+
         --filter-system-calls
             Apply seccomp filter for system calls (default: false, only supported on x86_64).`
 
@@ -52,7 +55,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	caKeyData, err := server.LoadSystemdCred("netfoil-hi-ca")
+	caKeyData, err := server.LoadSystemdCred(options.CAKeyName)
 	if err != nil {
 		caKeyPath := filepath.Join(options.ConfigDirectory, "ca.key")
 		caKeyData, err = os.ReadFile(caKeyPath)
@@ -111,19 +114,21 @@ type Options struct {
 	Port              int
 	ConfigDirectory   string
 	FilterSystemCalls bool
+	CAKeyName         string
 }
 
 func processInput() (*Options, error) {
 	flags := flag.NewFlagSet("all", flag.ExitOnError)
 	var help, h, filterSystemCalls bool
 
-	var configPath, ipString string
+	var configPath, ipString, caKeyName string
 	var portInt int
 	flags.BoolVar(&help, "help", false, "")
 	flags.BoolVar(&h, "h", false, "")
 	flags.IntVar(&portInt, "port", 8080, "")
 	flags.StringVar(&ipString, "ip", "192.168.122.1", "")
 	flags.StringVar(&configPath, "config-directory", "/etc/netfoil-hi", "")
+	flags.StringVar(&caKeyName, "ca-key", "netfoil-hi-ca", "")
 	flags.BoolVar(&filterSystemCalls, "filter-system-calls", false, "")
 
 	err := flags.Parse(os.Args[1:])
@@ -146,6 +151,7 @@ func processInput() (*Options, error) {
 		Port:              portInt,
 		ConfigDirectory:   configPath,
 		FilterSystemCalls: filterSystemCalls,
+		CAKeyName:         caKeyName,
 	}, nil
 }
 

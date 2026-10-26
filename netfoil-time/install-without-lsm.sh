@@ -1,18 +1,26 @@
 #!/bin/bash
 
-systemctl stop netfoil-time.socket --quiet
-systemctl stop netfoil-time.service --quiet
+instance="$1"
+if [[ -z "$instance" ]]; then
+	echo "systemd instance must be specified, e.g. 'default'"
+	exit 1
+fi
+
+echo "instance $instance"
+
+systemctl stop "netfoil-time-$instance.socket" --quiet
+systemctl stop "netfoil-time@$instance.service" --quiet
 
 set -e
 
 sleep .2
-cp systemd/netfoil-time.socket /usr/lib/systemd/system/netfoil-time.socket
-cp systemd/netfoil-time.service /usr/lib/systemd/system/netfoil-time.service
-cp systemd/netfoil_time.slice /usr/lib/systemd/system/netfoil_time.slice
+cp "systemd/netfoil-time@.service" "/usr/lib/systemd/system/netfoil-time@.service"
+cp "systemd/netfoil-time-$instance.socket" "/usr/lib/systemd/system/netfoil-time-$instance.socket"
+cp "systemd/netfoil_$instance-time.slice" "/usr/lib/systemd/system/netfoil_$instance-time.slice"
 
 cp netfoil-time /usr/sbin/netfoil-time
 systemctl daemon-reload
-systemctl start netfoil-time.socket
-systemctl start netfoil-time.service
+systemctl start "netfoil-time-$instance.socket"
+systemctl start "netfoil-time@$instance.service"
 
-systemctl enable netfoil-time.service
+systemctl enable "netfoil-time@$instance.service"

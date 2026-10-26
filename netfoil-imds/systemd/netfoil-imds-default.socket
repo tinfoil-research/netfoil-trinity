@@ -3,7 +3,7 @@ Description=Netfoil IMDS
 
 [Socket]
 ListenStream=192.168.122.1:8081
-Service=netfoil-imds.service
+Service=netfoil-imds@default.service
 
 [Install]
 WantedBy=sockets.target

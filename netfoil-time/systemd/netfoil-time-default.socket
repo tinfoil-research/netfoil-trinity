@@ -3,7 +3,7 @@ Description=Netfoil Time
 
 [Socket]
 ListenDatagram=192.168.122.1:8123
-Service=netfoil-time.service
+Service=netfoil-time@default.service
 
 [Install]
 WantedBy=sockets.target

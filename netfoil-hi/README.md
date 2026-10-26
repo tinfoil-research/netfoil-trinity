@@ -5,7 +5,7 @@
 
 ## Set CA secrets
 ```
-cat ca.key | systemd-creds encrypt --name=netfoil-hi-ca - /etc/credstore.encrypted/netfoil-hi-ca
+cat ca.key | systemd-creds encrypt --name=netfoil-hi-default-ca - /etc/credstore.encrypted/netfoil-hi-default-ca
 ```
 
 ## Configure CA

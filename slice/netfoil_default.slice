@@ -1,0 +1,6 @@
+[Unit]
+Description=Netfoil default slice
+Before=slices.target
+
+[Slice]
+#AllowedCPUs=
