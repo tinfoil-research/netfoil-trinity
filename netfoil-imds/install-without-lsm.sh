@@ -18,7 +18,7 @@ cp "systemd/netfoil-imds@.service" "/usr/lib/systemd/system/netfoil-imds@.servic
 cp "systemd/netfoil-imds-$instance.socket" "/usr/lib/systemd/system/netfoil-imds-$instance.socket"
 cp "systemd/netfoil_$instance-imds.slice" "/usr/lib/systemd/system/netfoil_$instance-imds.slice"
 
-cp netfoil-imds /usr/sbin/netfoil-imds
+cp -f netfoil-imds /usr/sbin/netfoil-imds
 systemctl daemon-reload
 systemctl start "netfoil-imds-$instance.socket"
 systemctl start "netfoil-imds@$instance.service"
