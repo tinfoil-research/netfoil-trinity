@@ -1,8 +1,10 @@
 package hi
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"net"
 	"net/http"
 	"time"
 )
@@ -10,14 +12,24 @@ import (
 func NewClient(caCertPool *x509.CertPool) (*http.Client, error) {
 	timeout := 30 * time.Second
 
-	tlsConfig := &tls.Config{}
-	tlsConfig.RootCAs = caCertPool
+	tlsConfig := &tls.Config{
+		RootCAs:    caCertPool,
+		NextProtos: []string{"h2", "http/1.1"},
+	}
+
+	dialer := &net.Dialer{
+		Timeout:   timeout,
+		KeepAlive: 2 * timeout,
+	}
 
 	httpTransport := &http.Transport{
 		TLSClientConfig:       tlsConfig,
 		IdleConnTimeout:       timeout,
 		ResponseHeaderTimeout: timeout,
 		TLSHandshakeTimeout:   timeout,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.DialContext(ctx, "tcp4", addr)
+		},
 	}
 
 	client := http.Client{
