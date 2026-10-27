@@ -24,6 +24,7 @@ func NewClient(caCertPool *x509.CertPool) (*http.Client, error) {
 
 	httpTransport := &http.Transport{
 		TLSClientConfig:       tlsConfig,
+		ForceAttemptHTTP2:     true,
 		IdleConnTimeout:       timeout,
 		ResponseHeaderTimeout: timeout,
 		TLSHandshakeTimeout:   timeout,
