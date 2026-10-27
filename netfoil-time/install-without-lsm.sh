@@ -18,7 +18,7 @@ cp "systemd/netfoil-time@.service" "/usr/lib/systemd/system/netfoil-time@.servic
 cp "systemd/netfoil-time-$instance.socket" "/usr/lib/systemd/system/netfoil-time-$instance.socket"
 cp "systemd/netfoil_$instance-time.slice" "/usr/lib/systemd/system/netfoil_$instance-time.slice"
 
-cp netfoil-time /usr/sbin/netfoil-time
+cp -f netfoil-time /usr/sbin/netfoil-time
 systemctl daemon-reload
 systemctl start "netfoil-time-$instance.socket"
 systemctl start "netfoil-time@$instance.service"

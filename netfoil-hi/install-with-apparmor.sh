@@ -14,7 +14,7 @@ systemctl stop "netfoil-hi@$instance.service" --quiet
 set -e
 
 # AppArmor
-cp apparmor/netfoil-hi /etc/apparmor.d/netfoil-hi
+cp -f apparmor/netfoil-hi /etc/apparmor.d/netfoil-hi
 apparmor_parser -r /etc/apparmor.d/netfoil-hi
 
 sleep .2
