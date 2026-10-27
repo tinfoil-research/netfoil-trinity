@@ -60,10 +60,10 @@ SystemCallFilter=madvise
 SystemCallFilter=setrlimit
 
 # Create /run/netfoil
-RuntimeDirectory=netfoil-time
+RuntimeDirectory=netfoil-time-%i
 RuntimeDirectoryMode=0700
 
-RootDirectory=/run/netfoil-time
+RootDirectory=/run/netfoil-time-%i
 
 RestrictAddressFamilies=none
 RestrictNamespaces=yes
