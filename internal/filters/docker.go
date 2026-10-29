@@ -10,7 +10,7 @@ import (
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
 
-var regexDockerImageName = regexp.MustCompile("^[a-z0-9-]+$")
+var regexDockerImageName = regexp.MustCompile("^[a-z0-9-]+(/[a-z0-9-]+)?$")
 var regexDockerVersion = regexp.MustCompile("^(latest|v[0-9]+(\\.[0-9]+)*|sha256:[a-f0-9]{64})$")
 var regexDockerExpires = regexp.MustCompile("^[0-9]+$")
 var regexDockerSignature = regexp.MustCompile("^[a-zA-Z0-9~_-]+$")
@@ -18,11 +18,11 @@ var regexDockerKeyPairID = regexp.MustCompile("^[A-Z0-9]+$")
 var regexSHA256 = regexp.MustCompile("^[a-f0-9]{64}$")
 
 var regexDockerHeaderUserAgent = regexp.MustCompile("^[a-zA-Z0-9/:.+ ()_\\\\-]+$")
-var regexDockerHeaderAccept = regexp.MustCompile("^([a-z0-9/.-]+\\+(json|gzip)|\\*/\\*)$")
+var regexDockerHeaderAccept = regexp.MustCompile("^([a-z0-9/.-]+(\\+json|\\+gzip|\\.gzip)|\\*/\\*)$")
 var regexDockerHeaderBaggage = regexp.MustCompile("^trigger=api$")
 var regexDockerHeaderAcceptEncoding = regexp.MustCompile("^[a-z0-9;=., ]+$")
 var regexDockerHeaderAuthorization = regexp.MustCompile("^Bearer [a-zA-Z0-9._-]+$")
-var regexDockerHeaderReferer = regexp.MustCompile("^https://registry-1\\.docker\\.io/v2/library/[a-z0-9-]+/blobs/sha256:[a-f0-9]{64}$")
+var regexDockerHeaderReferer = regexp.MustCompile("^https://registry-1\\.docker\\.io/v2/[a-z0-9-]+/[a-z0-9-]+/blobs/sha256:[a-f0-9]{64}$")
 
 type DockerFilter struct {
 	imageTrie      trie.Node
@@ -53,6 +53,7 @@ func dockerAllowedHeaders() map[string]*regexp.Regexp {
 	allowedHeaders["Accept-Encoding"] = regexDockerHeaderAcceptEncoding
 	allowedHeaders["Authorization"] = regexDockerHeaderAuthorization
 	allowedHeaders["Referer"] = regexDockerHeaderReferer
+	allowedHeaders["Range"] = regexHeaderRange
 	return allowedHeaders
 }
 
@@ -117,13 +118,21 @@ func (f *DockerFilter) verifyRegistry(urlString string, method string) bool {
 		return false
 	}
 
-	releasesPrefix := "/v2/library/"
+	releasesPrefix := "/v2/"
 	if after, ok := strings.CutPrefix(urlString, releasesPrefix); ok {
 		parts := strings.Split(after, "/")
 
-		imageName := parts[0]
-		t := parts[1]
-		version := parts[2]
+		if len(parts) != 4 {
+			return false
+		}
+
+		imageName := parts[1]
+		if parts[0] != "library" {
+			imageName = strings.Join(parts[0:2], "/")
+		}
+
+		t := parts[2]
+		version := parts[3]
 
 		if !regexDockerImageName.MatchString(imageName) {
 			return false
@@ -185,10 +194,7 @@ func (f *DockerFilter) verifyAuth(urlString string, method string) bool {
 		return false
 	}
 
-	imageName, ok := strings.CutPrefix(parts[1], "library/")
-	if !ok {
-		return false
-	}
+	imageName, _ := strings.CutPrefix(parts[1], "library/")
 
 	if !regexDockerImageName.MatchString(imageName) {
 		return false
