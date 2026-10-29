@@ -72,7 +72,6 @@ func ApplyFilter(allowedSyscalls []uint32, argumentFilters ArgumentFilters) erro
 	argOffset0 := uint32(16)
 	argOffset1 := uint32(24)
 	argOffset2 := uint32(32)
-	argOffset3 := uint32(40)
 
 	instructions = append(instructions, bpf.LoadAbsolute{Off: archOffset, Size: intSize})
 	instructions = append(instructions, bpf.JumpIf{Cond: bpf.JumpEqual, Val: unix.AUDIT_ARCH_X86_64, SkipTrue: 1})
@@ -87,18 +86,12 @@ func ApplyFilter(allowedSyscalls []uint32, argumentFilters ArgumentFilters) erro
 	// mmap
 	// prctl PR_SET_MDWE is an alternative
 	{
-		instructions = append(instructions, bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: unix.SYS_MMAP, SkipTrue: 9})
+		instructions = append(instructions, bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: unix.SYS_MMAP, SkipTrue: 5})
 
 		instructions = append(instructions, bpf.LoadAbsolute{Off: argOffset2, Size: intSize})
 		instructions = append(instructions, bpf.ALUOpConstant{Op: bpf.ALUOpAnd, Val: unix.PROT_EXEC})
 
 		instructions = append(instructions, bpf.JumpIf{Cond: bpf.JumpNotEqual, Val: unix.PROT_EXEC, SkipTrue: 1})
-		instructions = append(instructions, bpf.RetConstant{Val: uint32(unix.SECCOMP_RET_KILL_PROCESS)})
-
-		instructions = append(instructions, bpf.LoadAbsolute{Off: argOffset3, Size: intSize})
-		instructions = append(instructions, bpf.ALUOpConstant{Op: bpf.ALUOpAnd, Val: unix.MAP_SHARED | unix.MAP_PRIVATE | unix.MAP_ANON})
-
-		instructions = append(instructions, bpf.JumpIf{Cond: bpf.JumpEqual, Val: unix.MAP_PRIVATE | unix.MAP_ANON, SkipTrue: 1})
 		instructions = append(instructions, bpf.RetConstant{Val: uint32(unix.SECCOMP_RET_KILL_PROCESS)})
 
 		instructions = append(instructions, bpf.RetConstant{Val: uint32(unix.SECCOMP_RET_ALLOW)})
