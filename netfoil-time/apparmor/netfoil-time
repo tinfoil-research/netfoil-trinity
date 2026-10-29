@@ -14,7 +14,7 @@ include <tunables/global>
 
   @{PROC}/@{pid}/cgroup r,
   @{PROC}/@{pid}/mountinfo r,
-  /sys/fs/cgroup/netfoil_time.slice/netfoil-time.service/cpu.max r,
+  /sys/fs/cgroup/netfoil_*.slice/netfoil_*-time.slice/netfoil-time@*.service/cpu.max r,
 
   # remove some of the defaults
   deny ptrace,
