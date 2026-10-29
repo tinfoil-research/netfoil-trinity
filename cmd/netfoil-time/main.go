@@ -23,7 +23,7 @@ OPTIONS
             TCP port to listen on (default: 8123).
 
         --config-directory
-            Config directory (default: /etc/netfoil-time).
+            Config directory (default: /etc/netfoil/time/default).
 
         --filter-system-calls
             Apply seccomp filter for system calls (default: false, only supported on x86_64).`
@@ -67,7 +67,7 @@ func processInput() (*Options, error) {
 	flags.BoolVar(&h, "h", false, "")
 	flags.IntVar(&portInt, "port", 8123, "")
 	flags.StringVar(&ipString, "ip", "192.168.122.1", "")
-	flags.StringVar(&configPath, "config-directory", "/etc/netfoil-imds", "")
+	flags.StringVar(&configPath, "config-directory", "/etc/netfoil/time/default", "")
 	flags.BoolVar(&filterSystemCalls, "filter-system-calls", false, "")
 
 	err := flags.Parse(os.Args[1:])

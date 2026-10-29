@@ -27,7 +27,7 @@ OPTIONS
             TCP port to listen on (default: 8080).
 
         --config-directory
-            Config directory (default: /etc/netfoil-imds).
+            Config directory (default: /etc/netfoil/hi/default).
 
         --ca-key
             Name of systemd credential with CA key
@@ -92,7 +92,7 @@ func main() {
 		GetCertificate: interceptor.GetCertificate,
 	}
 
-	timeout := 10 * time.Second
+	timeout := 60 * time.Second
 	server := &http.Server{
 		Handler:      mux,
 		TLSConfig:    tlsConfig,
@@ -127,7 +127,7 @@ func processInput() (*Options, error) {
 	flags.BoolVar(&h, "h", false, "")
 	flags.IntVar(&portInt, "port", 8080, "")
 	flags.StringVar(&ipString, "ip", "192.168.122.1", "")
-	flags.StringVar(&configPath, "config-directory", "/etc/netfoil-hi", "")
+	flags.StringVar(&configPath, "config-directory", "/etc/netfoil/hi/default", "")
 	flags.StringVar(&caKeyName, "ca-key", "netfoil-hi-ca", "")
 	flags.BoolVar(&filterSystemCalls, "filter-system-calls", false, "")
 
@@ -175,6 +175,8 @@ func applySystemCallFilter(filter bool) error {
 
 			// TODO
 			unix.SYS_UNAME,
+
+			unix.SYS_NEWFSTATAT,
 		}
 
 		argumentFilters := seccomp.ArgumentFilters{

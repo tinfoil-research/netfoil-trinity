@@ -80,6 +80,7 @@ func fedoraAllowedHeaders() map[string]*regexp.Regexp {
 	allowedHeaders["Pragma"] = regexFedoraHeaderPragma
 	allowedHeaders["User-Agent"] = regexFedoraHeaderUserAgent
 	allowedHeaders["Accept"] = regexFedoraHeaderAccept
+	allowedHeaders["Range"] = regexHeaderRange
 	return allowedHeaders
 }
 

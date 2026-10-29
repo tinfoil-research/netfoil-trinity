@@ -13,7 +13,7 @@ include <tunables/global>
 
   @{PROC}/@{pid}/cgroup r,
   @{PROC}/@{pid}/mountinfo r,
-  /sys/fs/cgroup/netfoil_imds.slice/netfoil-imds.service/cpu.max r,
+  /sys/fs/cgroup/netfoil_*.slice/netfoil_*-imds.slice/netfoil-imds@*.service/cpu.max r,
 
   # remove some of the defaults
   deny ptrace,

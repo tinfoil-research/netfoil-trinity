@@ -53,6 +53,10 @@ func TestHeaderAccept(t *testing.T) {
 	if !regexDockerHeaderAccept.MatchString("*/*") {
 		t.Errorf("should match")
 	}
+
+	if !regexDockerHeaderAccept.MatchString("application/vnd.docker.image.rootfs.diff.tar.gzip") {
+		t.Errorf("should match")
+	}
 }
 
 func TestHeaderReferer(t *testing.T) {

@@ -257,25 +257,39 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	data, err := io.ReadAll(response.Body)
-	if err != nil {
-		sb.WriteString(fmt.Sprintf("upstream call failed: %s\n", err.Error()))
-
-		i.logChannel <- handlerLog{
-			log: sb.String(),
-		}
-		return
-	}
-
 	w.WriteHeader(response.StatusCode)
-	_, err = w.Write(data)
-	if err != nil {
-		sb.WriteString(fmt.Sprintf("response copy failed: %s\n", err.Error()))
+	buffer := make([]byte, 32*1024)
+	done := false
+	for {
+		n, err := response.Body.Read(buffer)
+		if err != nil && err != io.EOF {
+			sb.WriteString(fmt.Sprintf("failed to read response: %s\n", err.Error()))
 
-		i.logChannel <- handlerLog{
-			log: sb.String(),
+			i.logChannel <- handlerLog{
+				log: sb.String(),
+			}
+			return
 		}
-		return
+
+		if err == io.EOF {
+			done = true
+		}
+
+		if n > 0 {
+			_, err = w.Write(buffer[:n])
+			if err != nil {
+				sb.WriteString(fmt.Sprintf("failed to copy response: %s\n", err.Error()))
+
+				i.logChannel <- handlerLog{
+					log: sb.String(),
+				}
+				return
+			}
+		}
+
+		if done {
+			break
+		}
 	}
 
 	i.logChannel <- handlerLog{

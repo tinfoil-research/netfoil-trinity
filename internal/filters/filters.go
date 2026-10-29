@@ -10,6 +10,7 @@ import (
 )
 
 var regexCharacters = regexp.MustCompile("^[a-zA-Z]+$")
+var regexHeaderRange = regexp.MustCompile("^bytes=([0-9]+-|[0-9]+-[0-9]+|-[0-9]+)(,[0-9]+-|,[0-9]+-[0-9]+|,-[0-9]+)*$")
 
 type Filter interface {
 	Transform(*http.Request) (*http.Request, bool)
