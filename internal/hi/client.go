@@ -10,7 +10,7 @@ import (
 )
 
 func NewClient(caCertPool *x509.CertPool) (*http.Client, error) {
-	timeout := 30 * time.Second
+	timeout := 60 * time.Second
 
 	tlsConfig := &tls.Config{
 		RootCAs:    caCertPool,
@@ -18,8 +18,7 @@ func NewClient(caCertPool *x509.CertPool) (*http.Client, error) {
 	}
 
 	dialer := &net.Dialer{
-		Timeout:   timeout,
-		KeepAlive: 2 * timeout,
+		Timeout: timeout,
 	}
 
 	httpTransport := &http.Transport{
