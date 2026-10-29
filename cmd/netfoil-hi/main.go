@@ -176,7 +176,7 @@ func applySystemCallFilter(filter bool) error {
 			// TODO
 			unix.SYS_UNAME,
 
-			unix.SYS_FSTATFS,
+			unix.SYS_NEWFSTATAT,
 		}
 
 		argumentFilters := seccomp.ArgumentFilters{
