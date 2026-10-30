@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/tinfoil-research/netfoil-trinity/internal/hi"
 	"github.com/tinfoil-research/netfoil-trinity/internal/seccomp"
@@ -92,13 +91,10 @@ func main() {
 		GetCertificate: interceptor.GetCertificate,
 	}
 
-	timeout := 60 * time.Second
 	server := &http.Server{
-		Handler:      mux,
-		TLSConfig:    tlsConfig,
-		ReadTimeout:  timeout,
-		WriteTimeout: timeout,
-		ConnState:    interceptor.ConnState,
+		Handler:   mux,
+		TLSConfig: tlsConfig,
+		ConnState: interceptor.ConnState,
 	}
 
 	fmt.Println("ready...")
