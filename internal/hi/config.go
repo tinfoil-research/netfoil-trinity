@@ -17,6 +17,7 @@ type Config struct {
 	FedoraRepoPrefix *url.URL
 	EnableGitHub     bool
 	EnableGo         bool
+	EnableNPM        bool
 	EnableDocker     bool
 }
 
@@ -52,6 +53,7 @@ const (
 	keyFedoraRepoPrefix ConfigKey = "FedoraRepoPrefix"
 	keyEnableGitHub     ConfigKey = "EnableGitHub"
 	keyEnableGo         ConfigKey = "EnableGo"
+	keyEnableNPM        ConfigKey = "EnableNPM"
 	keyEnableDocker     ConfigKey = "EnableDocker"
 )
 
@@ -114,6 +116,7 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		keyFedoraRepoPrefix,
 		keyEnableGitHub,
 		keyEnableGo,
+		keyEnableNPM,
 		keyEnableDocker,
 	)
 
@@ -185,6 +188,11 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		return nil, err
 	}
 
+	enableNPM, err := configMap.getBool(keyEnableNPM, false)
+	if err != nil {
+		return nil, err
+	}
+
 	enableDocker, err := configMap.getBool(keyEnableDocker, false)
 	if err != nil {
 		return nil, err
@@ -197,6 +205,7 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		FedoraRepoPrefix: fedoraRepoPrefix,
 		EnableGitHub:     enableGitHub,
 		EnableGo:         enableGo,
+		EnableNPM:        enableNPM,
 		EnableDocker:     enableDocker,
 	}, nil
 }

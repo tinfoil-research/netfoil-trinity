@@ -5,4 +5,5 @@
 
 # EnableGitHub=false
 # EnableGo=false
+# EnableNPM=false
 # EnableDocker=false

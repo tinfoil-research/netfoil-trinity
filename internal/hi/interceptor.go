@@ -127,6 +127,20 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 		filterMap["sum.golang.org"] = goFilter
 	}
 
+	if config.EnableNPM {
+		npmConfig, err := readConfig(configDirectory, filepath.Join("providers", "npm"))
+		if err != nil {
+			return nil, err
+		}
+
+		npmFilter, err := filters.NewNPMFilter(npmConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		filterMap["registry.npmjs.org"] = npmFilter
+	}
+
 	if config.EnableDocker {
 		dockerConfig, err := readConfig(configDirectory, filepath.Join("providers", "docker"))
 		if err != nil {
@@ -203,7 +217,11 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for key, value := range r.Header {
-		sb.WriteString(fmt.Sprintf("  %s: %s\n", key, strings.Join(value, ", ")))
+		if key == "Authorization" {
+			sb.WriteString(fmt.Sprintf("  %s: *******\n", key))
+		} else {
+			sb.WriteString(fmt.Sprintf("  %s: %s\n", key, strings.Join(value, ", ")))
+		}
 	}
 
 	filter, found := i.filters[r.Host]
