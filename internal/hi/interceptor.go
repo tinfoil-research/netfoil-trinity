@@ -217,7 +217,11 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for key, value := range r.Header {
-		sb.WriteString(fmt.Sprintf("  %s: %s\n", key, strings.Join(value, ", ")))
+		if key == "Authorization" {
+			sb.WriteString(fmt.Sprintf("  %s: *******\n", key))
+		} else {
+			sb.WriteString(fmt.Sprintf("  %s: %s\n", key, strings.Join(value, ", ")))
+		}
 	}
 
 	filter, found := i.filters[r.Host]
