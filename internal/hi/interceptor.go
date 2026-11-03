@@ -217,7 +217,7 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for key, value := range r.Header {
-		if key == "Authorization" {
+		if strings.ToLower(key) == "authorization" {
 			sb.WriteString(fmt.Sprintf("  %s: *******\n", key))
 		} else {
 			sb.WriteString(fmt.Sprintf("  %s: %s\n", key, strings.Join(value, ", ")))
