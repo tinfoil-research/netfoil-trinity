@@ -10,16 +10,16 @@ import (
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
 
-var regexNPMScope = regexp.MustCompile(`^@[a-z0-9-]+$`)
-var regexNPMPackageName = regexp.MustCompile(`^[a-z0-9-_]+$`)
-var regexNPMFilename = regexp.MustCompile(`^[a-z0-9-_]+[0-9]+(\.[0-9]+)*\.tgz$`)
+var regexNPMScope = regexp.MustCompile(`^@[a-z0-9-.]+$`)
+var regexNPMPackageName = regexp.MustCompile(`^[a-z0-9-_.]+$`)
+var regexNPMVersion = regexp.MustCompile(`[0-9]+(\.[0-9]+)*(-(rc|next|beta)\.[0-9]+)?`)
 
 var regexNPMHeaderPacoteVersion = regexp.MustCompile(`^[0-9]+(\.[0-9]+){0,2}$`)
 var regexNPMHeaderPacoteReqType = regexp.MustCompile(`^(packument|tarball)$`)
-var regexNPMHeaderPacotePkgId = regexp.MustCompile(`^(registry:(@[a-z0-9-]+/)?[a-z0-9-_]+|remote:(@[a-z0-9-]+/)?[a-z0-9-_]+@https://registry\.npmjs\.org/(@[a-z0-9-]+/)?[a-z0-9-_]+/-/[a-z0-9-_]+-[0-9]+(\.[0-9]+)*\.tgz)$`)
+var regexNPMHeaderPacotePkgId = regexp.MustCompile(`^(registry:(@[a-z0-9-.]+/)?[a-z0-9-_.]+|remote:(@[a-z0-9-.]+/)?[a-z0-9-_.]+@https://registry\.npmjs\.org/(@[a-z0-9-.]+/)?[a-z0-9-_.]+/-/[a-z0-9-_.]+-[0-9]+(\.[0-9]+)*(-(rc|next|beta)\.[0-9]+)?\.tgz)$`)
 var regexNPMHeaderPacoteIntegrity = regexp.MustCompile(`^sha512-[a-zA-Z0-9/+]+(==)?$`)
 var regexNPMHeaderConnection = regexp.MustCompile(`^keep-alive$`)
-var regexNPMHeaderAccept = regexp.MustCompile(`^(application/vnd\.npm\.install-v1\+json; q=1\.0|application/json; q=0\.8|\*/\*)$`)
+var regexNPMHeaderAccept = regexp.MustCompile(`^(application/vnd\.npm\.install-v1\+json; q=1\.0|application/json|application/json; q=0\.8|\*/\*)$`)
 var regexNPMHeaderAcceptEncoding = regexp.MustCompile(`^(gzip|deflate)$`)
 var regexNPMHeaderAuthType = regexp.MustCompile(`^web$`)
 var regexNPMHeaderCommand = regexp.MustCompile(`^install$`)
@@ -93,90 +93,24 @@ func (f *NPMFilter) Transform(r *http.Request) (*http.Request, bool) {
 		return nil, false
 	}
 
-	if len(parts) == 2 {
-		id, err := url.PathUnescape(parts[1])
+	if len(parts) == 2 || len(parts) == 3 {
+		err, allow := f.allowPackage(parts)
 		if err != nil {
 			return nil, false
 		}
 
-		idParts := strings.Split(id, "/")
-		if len(idParts) == 0 || len(idParts) > 2 {
-			return nil, false
-		}
-
-		packageName := idParts[0]
-
-		if len(idParts) == 2 {
-			scope := idParts[0]
-			packageName = idParts[1]
-
-			if !regexNPMScope.MatchString(scope) {
-				return nil, false
-			}
-		}
-
-		if !regexNPMPackageName.MatchString(packageName) {
-			return nil, false
-		}
-
-		_, found := f.trie.Match([]byte(id))
-		if !found {
+		if !allow {
 			return nil, false
 		}
 
 		return r, true
-	} else if len(parts) == 4 {
-		packageName := parts[1]
-		if !regexNPMPackageName.MatchString(packageName) {
+	} else if len(parts) == 4 || len(parts) == 5 {
+		err, allow := f.allowFile(parts)
+		if err != nil {
 			return nil, false
 		}
 
-		if parts[2] != "-" {
-			return nil, false
-		}
-
-		filename := parts[3]
-		if !regexNPMFilename.MatchString(filename) {
-			return nil, false
-		}
-
-		if !strings.HasPrefix(filename, packageName) {
-			return nil, false
-		}
-
-		_, found := f.trie.Match([]byte(packageName))
-		if !found {
-			return nil, false
-		}
-
-		return r, true
-	} else if len(parts) == 5 {
-		scope := parts[1]
-		if !regexNPMScope.MatchString(scope) {
-			return nil, false
-		}
-
-		packageName := parts[2]
-		if !regexNPMPackageName.MatchString(packageName) {
-			return nil, false
-		}
-
-		if parts[3] != "-" {
-			return nil, false
-		}
-
-		filename := parts[4]
-		if !regexNPMFilename.MatchString(filename) {
-			return nil, false
-		}
-
-		if !strings.HasPrefix(filename, packageName) {
-			return nil, false
-		}
-
-		id := scope + "/" + packageName
-		_, found := f.trie.Match([]byte(id))
-		if !found {
+		if !allow {
 			return nil, false
 		}
 
@@ -184,6 +118,99 @@ func (f *NPMFilter) Transform(r *http.Request) (*http.Request, bool) {
 	}
 
 	return nil, false
+}
+
+func (f *NPMFilter) allowPackage(parts []string) (error, bool) {
+	id, err := url.PathUnescape(parts[1])
+	if err != nil {
+		return nil, false
+	}
+
+	idParts := strings.Split(id, "/")
+	if len(idParts) == 0 || len(idParts) > 2 {
+		return nil, false
+	}
+
+	packageName := idParts[0]
+
+	if len(idParts) == 2 {
+		scope := idParts[0]
+		packageName = idParts[1]
+
+		if !regexNPMScope.MatchString(scope) {
+			return nil, false
+		}
+	}
+
+	if !regexNPMPackageName.MatchString(packageName) {
+		return nil, false
+	}
+
+	_, found := f.trie.Match([]byte(id))
+	if !found {
+		return nil, false
+	}
+
+	if len(parts) == 3 {
+		version := parts[2]
+		if !regexNPMVersion.MatchString(version) {
+			return nil, false
+		}
+	}
+
+	return nil, true
+}
+
+func (f *NPMFilter) allowFile(parts []string) (error, bool) {
+	offset := 0
+	scope := ""
+	if len(parts) == 5 {
+		scope = parts[1]
+		if !regexNPMScope.MatchString(scope) {
+			return nil, false
+		}
+		offset = 1
+	}
+
+	packageName := parts[offset+1]
+	if !regexNPMPackageName.MatchString(packageName) {
+		return nil, false
+	}
+
+	id := packageName
+	if scope != "" {
+		id = scope + "/" + packageName
+	}
+
+	if parts[offset+2] != "-" {
+		return nil, false
+	}
+
+	filename := parts[offset+3]
+	filenameSuffix, ok := strings.CutPrefix(filename, packageName+"-")
+	if !ok {
+		return nil, false
+	}
+
+	versionFromFilename, ok := strings.CutSuffix(filenameSuffix, ".tgz")
+	if !ok {
+		return nil, false
+	}
+
+	if !regexNPMVersion.MatchString(versionFromFilename) {
+		return nil, false
+	}
+
+	if !strings.HasPrefix(filename, packageName) {
+		return nil, false
+	}
+
+	_, found := f.trie.Match([]byte(id))
+	if !found {
+		return nil, false
+	}
+
+	return nil, true
 }
 
 func verifyNPMHeaders(r *http.Request, allowedHeaders map[string]*regexp.Regexp) bool {

@@ -20,6 +20,7 @@ var regexGitHubHeaderAcceptEncoding = regexp.MustCompile("^[a-z, ]+$")
 var regexGitHubHeaderAcceptLanguage = regexp.MustCompile("^[a-zA-Z0-9;=*., -]+$")
 var regexGitHubHeaderContentType = regexp.MustCompile("^application/x-git-upload-pack-request$")
 var regexGitHubHeaderContentLength = regexp.MustCompile("^[0-9]+$")
+var regexGitHubHeaderContentEncoding = regexp.MustCompile("^gzip$")
 
 type GitHubFilter struct {
 	trie           trie.Node
@@ -52,6 +53,7 @@ func gitHubAllowedHeaders() map[string]*regexp.Regexp {
 	allowedHeaders["Accept-Language"] = regexGitHubHeaderAcceptLanguage
 	allowedHeaders["Content-Type"] = regexGitHubHeaderContentType
 	allowedHeaders["Content-Length"] = regexGitHubHeaderContentLength
+	allowedHeaders["Content-Encoding"] = regexGitHubHeaderContentEncoding
 
 	return allowedHeaders
 }
