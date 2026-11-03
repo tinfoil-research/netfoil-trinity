@@ -88,6 +88,8 @@ func debianAllowedHeaders() map[string]*regexp.Regexp {
 	allowedHeaders["User-Agent"] = regexDebianHeaderUserAgent
 	allowedHeaders["Cache-Control"] = regexDebianHeaderCacheControl
 	allowedHeaders["Accept"] = regexDebianHeaderAccept
+	allowedHeaders["Range"] = regexHeaderRange
+	allowedHeaders["If-Range"] = regexNPMHeaderIfModifiedSince
 	return allowedHeaders
 }
 
@@ -181,11 +183,11 @@ func (f *DebianFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 			return false
 		}
 
-		leadingCharacter := parts[0]
+		prefix := parts[0]
 		packageName := parts[1]
 		file := parts[2]
 
-		if string(packageName[0]) != leadingCharacter {
+		if !strings.HasPrefix(packageName, prefix) {
 			return false
 		}
 
