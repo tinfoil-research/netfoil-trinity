@@ -2,7 +2,7 @@ package filters
 
 import "testing"
 
-func TestNPMRegex(t *testing.T) {
+func TestNPMRegexHeaders(t *testing.T) {
 	if !regexNPMHeaderPacoteVersion.MatchString("12.3.4") {
 		t.Errorf("should match")
 	}
@@ -19,11 +19,31 @@ func TestNPMRegex(t *testing.T) {
 		t.Errorf("should match")
 	}
 
+	if !regexNPMHeaderPacotePkgId.MatchString("registry:@t.e-st/t.e-st") {
+		t.Errorf("should match")
+	}
+
 	if !regexNPMHeaderPacotePkgId.MatchString("remote:test@https://registry.npmjs.org/test/-/test-1.2.3.tgz") {
 		t.Errorf("should match")
 	}
 
 	if !regexNPMHeaderPacotePkgId.MatchString("remote:@test/test@https://registry.npmjs.org/@test/test/-/test-1.2.3.tgz") {
+		t.Errorf("should match")
+	}
+
+	if !regexNPMHeaderPacotePkgId.MatchString("remote:@test/test@https://registry.npmjs.org/@test/test/-/te.s-t-1.2.3.tgz") {
+		t.Errorf("should match")
+	}
+
+	if !regexNPMHeaderPacotePkgId.MatchString("remote:@test/test@https://registry.npmjs.org/@test/test/-/test-1.2.3-rc.1.tgz") {
+		t.Errorf("should match")
+	}
+
+	if !regexNPMHeaderPacotePkgId.MatchString("remote:@test/test@https://registry.npmjs.org/@test/test/-/test-1.2.3-next.1.tgz") {
+		t.Errorf("should match")
+	}
+
+	if !regexNPMHeaderPacotePkgId.MatchString("remote:@test/test@https://registry.npmjs.org/@test/test/-/test-1.2.3-beta.1.tgz") {
 		t.Errorf("should match")
 	}
 
@@ -40,6 +60,10 @@ func TestNPMRegex(t *testing.T) {
 	}
 
 	if !regexNPMHeaderAccept.MatchString("application/json; q=0.8") {
+		t.Errorf("should match")
+	}
+
+	if !regexNPMHeaderAccept.MatchString("application/json") {
 		t.Errorf("should match")
 	}
 
@@ -76,6 +100,24 @@ func TestNPMRegex(t *testing.T) {
 	}
 
 	if !regexNPMHeaderPacoteIntegrity.MatchString("sha512-azAZ/09==") {
+		t.Errorf("should match")
+	}
+}
+
+func TestRegex(t *testing.T) {
+	if !regexNPMScope.MatchString("@test-a.z") {
+		t.Errorf("should match")
+	}
+
+	if !regexNPMPackageName.MatchString("test-a.z") {
+		t.Errorf("should match")
+	}
+
+	if !regexNPMVersion.MatchString("1.2") {
+		t.Errorf("should match")
+	}
+
+	if !regexNPMVersion.MatchString("1.2-alpha.1") {
 		t.Errorf("should match")
 	}
 }
