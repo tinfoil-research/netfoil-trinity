@@ -19,6 +19,7 @@ type Config struct {
 	EnableGo         bool
 	EnableNPM        bool
 	EnableDocker     bool
+	MaskRequest      bool
 }
 
 func ReadConfigFile(configDirectory string) (*Config, error) {
@@ -55,6 +56,7 @@ const (
 	keyEnableGo         ConfigKey = "EnableGo"
 	keyEnableNPM        ConfigKey = "EnableNPM"
 	keyEnableDocker     ConfigKey = "EnableDocker"
+	keyMaskRequest      ConfigKey = "MaskRequest"
 )
 
 type ConfigMap struct {
@@ -118,6 +120,7 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		keyEnableGo,
 		keyEnableNPM,
 		keyEnableDocker,
+		keyMaskRequest,
 	)
 
 	for scanner.Scan() {
@@ -198,6 +201,11 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		return nil, err
 	}
 
+	maskRequest, err := configMap.getBool(keyMaskRequest, false)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		EnableDebian:     enableDebian,
 		EnableUbuntu:     enableUbuntu,
@@ -207,6 +215,7 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		EnableGo:         enableGo,
 		EnableNPM:        enableNPM,
 		EnableDocker:     enableDocker,
+		MaskRequest:      maskRequest,
 	}, nil
 }
 

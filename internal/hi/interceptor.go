@@ -25,6 +25,7 @@ type Interceptor struct {
 	caPrivateKey     *ecdsa.PrivateKey
 	domainPrivateKey *ecdsa.PrivateKey
 	logChannel       chan<- handlerLog
+	maskRequest      bool
 }
 
 type handlerLog struct {
@@ -133,7 +134,7 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 			return nil, err
 		}
 
-		npmFilter, err := filters.NewNPMFilter(npmConfig)
+		npmFilter, err := filters.NewNPMFilter(npmConfig, config.MaskRequest)
 		if err != nil {
 			return nil, err
 		}
@@ -176,6 +177,7 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 		caPrivateKey:     caPrivateKey,
 		domainPrivateKey: domainPrivateKey,
 		logChannel:       logChannel,
+		maskRequest:      config.MaskRequest,
 	}
 
 	go func() {
@@ -247,6 +249,16 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 			log: sb.String(),
 		}
 		return
+	}
+
+	if i.maskRequest {
+		for key, value := range r.Header {
+			if strings.ToLower(key) == "authorization" {
+				sb.WriteString(fmt.Sprintf("    %s: *******\n", key))
+			} else {
+				sb.WriteString(fmt.Sprintf("    %s: %s\n", key, strings.Join(value, ", ")))
+			}
+		}
 	}
 
 	r.RequestURI = ""
