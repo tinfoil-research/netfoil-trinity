@@ -237,7 +237,6 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.URL.Scheme = "https"
 	r.URL.Host = r.Host
 
 	r, allowed := filter.Transform(r)
@@ -259,6 +258,17 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 				sb.WriteString(fmt.Sprintf("    %s: %s\n", key, strings.Join(value, ", ")))
 			}
 		}
+	}
+
+	r.URL.Scheme = "https"
+	if r.URL.User != nil {
+		sb.WriteString(fmt.Sprintf("url user is not empty\n"))
+		w.WriteHeader(403)
+
+		i.logChannel <- handlerLog{
+			log: sb.String(),
+		}
+		return
 	}
 
 	r.RequestURI = ""

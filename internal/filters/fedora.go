@@ -15,7 +15,7 @@ var regexFedoraPath = regexp.MustCompile("^(/[a-zA-Z0-9-_]+)*(\\.xml|\\.xml\\.zc
 
 // FIXME proper parsing
 var regexFedoraPackageName = regexp.MustCompile("^[a-zA-Z0-9+_-]+(\\.[a-zA-Z0-9+_-]+)*$")
-var regexFedoraPart2 = regexp.MustCompile("^[0-9a-z+^]+(\\.[0-9a-z+^]+)*")
+var regexFedoraPart2 = regexp.MustCompile("^[0-9a-z+^]+(\\.[0-9a-z+^]+)*$")
 var regexFedoraPart3 = regexp.MustCompile("^[0-9a-z]+\\.fc44\\.(x86_64|noarch)\\.rpm|$")
 
 var regexFedoraHeaderCacheControl = regexp.MustCompile("^no-cache$")
@@ -153,7 +153,7 @@ func (f *FedoraFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 		}
 
 		packageNameRaw := strings.Join(filenameParts[0:len(filenameParts)-2], "-")
-		packageName, err := url.QueryUnescape(packageNameRaw)
+		packageName, err := url.PathUnescape(packageNameRaw)
 		if err != nil {
 			return false
 		}
