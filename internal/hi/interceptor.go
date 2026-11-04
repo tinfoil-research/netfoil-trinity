@@ -273,6 +273,16 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer response.Body.Close()
 
+	if response.StatusCode < 100 {
+		sb.WriteString(fmt.Sprintf("status code less than 100: %d\n", response.StatusCode))
+		w.WriteHeader(500)
+
+		i.logChannel <- handlerLog{
+			log: sb.String(),
+		}
+		return
+	}
+
 	sb.WriteString(fmt.Sprintf("\n  StatusCode: %d\n", response.StatusCode))
 	for key, values := range response.Header {
 		if strings.ToLower(key) == "set-cookie" {
