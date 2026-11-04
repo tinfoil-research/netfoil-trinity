@@ -13,7 +13,7 @@ import (
 
 var regexNPMScope = regexp.MustCompile(`^@[a-z0-9-.]+$`)
 var regexNPMPackageName = regexp.MustCompile(`^[a-z0-9-_.]+$`)
-var regexNPMVersion = regexp.MustCompile(`[0-9]{1,3}(\.[0-9]{1,3}){0,2}(-(rc|next|beta)\.[0-9])?`)
+var regexNPMVersion = regexp.MustCompile(`^[0-9]{1,3}(\.[0-9]{1,3}){0,2}(-(rc|next|beta)\.[0-9])?$`)
 
 var regexNPMHeaderPacoteVersion = regexp.MustCompile(`^[0-9]{1,3}(\.[0-9]{1,3}){0,2}$`)
 var regexNPMHeaderPacoteIntegrity = regexp.MustCompile(`^sha512-[a-zA-Z0-9/+]+(==)?$`)

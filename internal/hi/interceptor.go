@@ -218,13 +218,7 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for key, value := range r.Header {
-		if strings.ToLower(key) == "authorization" {
-			sb.WriteString(fmt.Sprintf("  %s: *******\n", key))
-		} else {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", key, strings.Join(value, ", ")))
-		}
-	}
+	printHeaders(&sb, r.Header, "  ")
 
 	filter, found := i.filters[r.Host]
 	if !found {
@@ -251,13 +245,7 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if i.maskRequest {
-		for key, value := range r.Header {
-			if strings.ToLower(key) == "authorization" {
-				sb.WriteString(fmt.Sprintf("    %s: *******\n", key))
-			} else {
-				sb.WriteString(fmt.Sprintf("    %s: %s\n", key, strings.Join(value, ", ")))
-			}
-		}
+		printHeaders(&sb, r.Header, "    ")
 	}
 
 	r.URL.Scheme = "https"
@@ -334,6 +322,16 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 
 	i.logChannel <- handlerLog{
 		log: sb.String(),
+	}
+}
+
+func printHeaders(sb *strings.Builder, headers http.Header, prefix string) {
+	for key, value := range headers {
+		if strings.ToLower(key) == "authorization" {
+			sb.WriteString(fmt.Sprintf("%s%s: *******\n", prefix, key))
+		} else {
+			sb.WriteString(fmt.Sprintf("%s%s: %s\n", prefix, key, strings.Join(value, ", ")))
+		}
 	}
 }
 

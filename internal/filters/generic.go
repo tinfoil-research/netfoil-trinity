@@ -104,5 +104,12 @@ func (f *GenericFilter) Transform(r *http.Request) (*http.Request, bool) {
 		return nil, false
 	}
 
+	if r.Method == string(verbs.GET) || r.Method == string(verbs.HEAD) {
+		err := errOnNonEmptyBody(r)
+		if err != nil {
+			return nil, false
+		}
+	}
+
 	return r, true
 }
