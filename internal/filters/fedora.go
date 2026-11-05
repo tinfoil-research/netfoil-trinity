@@ -13,7 +13,7 @@ import (
 )
 
 var regexFedoraPackageName = regexp.MustCompile(`^[a-zA-Z0-9+_-]+(\.[a-zA-Z0-9+_-]+)*$`)
-var regexFedoraVersion = regexp.MustCompile(`^([0-9]:)?[0-9a-z]+(\.[0-9a-z]+){0,2}([+^_][0-9a-z]+(\.[0-9a-z]+){0,2})?-[0-9a-z]+(\.[0-9a-z]+){0,2}$`)
+var regexFedoraVersion = regexp.MustCompile(`^([0-9]:)?[0-9]+(\.[0-9]+){0,2}([+^_.][0-9a-z]+(\.[0-9a-z]+){0,2})?-[0-9a-z]+(\.[0-9a-z]+){0,2}$`)
 
 var regexRepodata = regexp.MustCompile(`[0-9a-f]{64}-(updateinfo\.xml\.zck|comps-Everything\.x86_64\.xml\.zst|primary\.xml\.zck)`)
 
@@ -199,10 +199,14 @@ func (f *FedoraFilter) verifyPackage(parts []string) (*string, bool) {
 		return nil, false
 	}
 
-	leadingCharacter := parts[0]
+	prefix := parts[0]
 	filename := parts[1]
 
-	if !strings.HasPrefix(strings.ToLower(string(filename[0])), leadingCharacter) {
+	if len(prefix) > 10 || len(filename) > 80 {
+		return nil, false
+	}
+
+	if !strings.HasPrefix(strings.ToLower(string(filename[0])), prefix) {
 		return nil, false
 	}
 
