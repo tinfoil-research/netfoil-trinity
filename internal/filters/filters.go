@@ -14,6 +14,7 @@ var regexHeaderRange = regexp.MustCompile("^bytes=([0-9]+-|[0-9]+-[0-9]+|-[0-9]+
 
 type Filter interface {
 	Transform(*http.Request) (*http.Request, bool)
+	MaskSupported() bool
 }
 
 type AllowAllFilter struct{}

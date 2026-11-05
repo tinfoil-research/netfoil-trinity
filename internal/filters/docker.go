@@ -113,6 +113,10 @@ func (f *DockerFilter) Transform(r *http.Request) (*http.Request, bool) {
 	return nil, false
 }
 
+func (f *DockerFilter) MaskSupported() bool {
+	return false
+}
+
 func (f *DockerFilter) verifyRegistry(urlString string, method string) bool {
 	if !(method == string(verbs.GET) || method == string(verbs.HEAD)) {
 		return false

@@ -111,3 +111,7 @@ func (f *GitHubFilter) Transform(r *http.Request) (*http.Request, bool) {
 
 	return r, false
 }
+
+func (f *GitHubFilter) MaskSupported() bool {
+	return false
+}

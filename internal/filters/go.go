@@ -129,3 +129,7 @@ func (f *GolangFilter) Transform(r *http.Request) (*http.Request, bool) {
 
 	return nil, false
 }
+
+func (f *GolangFilter) MaskSupported() bool {
+	return false
+}

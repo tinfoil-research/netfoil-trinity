@@ -117,7 +117,7 @@ func TestRegex(t *testing.T) {
 		t.Errorf("should match")
 	}
 
-	if !regexNPMVersion.MatchString("1.2-alpha.1") {
+	if !regexNPMVersion.MatchString("1.2-beta.1") {
 		t.Errorf("should match")
 	}
 }

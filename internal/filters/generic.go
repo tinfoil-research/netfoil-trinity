@@ -104,5 +104,16 @@ func (f *GenericFilter) Transform(r *http.Request) (*http.Request, bool) {
 		return nil, false
 	}
 
+	if r.Method == string(verbs.GET) || r.Method == string(verbs.HEAD) || r.Method == string(verbs.OPTIONS) {
+		err := errOnNonEmptyBody(r)
+		if err != nil {
+			return nil, false
+		}
+	}
+
 	return r, true
+}
+
+func (f *GenericFilter) MaskSupported() bool {
+	return false
 }

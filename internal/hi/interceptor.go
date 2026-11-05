@@ -25,6 +25,7 @@ type Interceptor struct {
 	caPrivateKey     *ecdsa.PrivateKey
 	domainPrivateKey *ecdsa.PrivateKey
 	logChannel       chan<- handlerLog
+	maskRequest      bool
 }
 
 type handlerLog struct {
@@ -90,7 +91,7 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 			return nil, err
 		}
 
-		fedoraFilter, err := filters.NewFedoraFilter(fedoraConfig, config.FedoraRepoPrefix)
+		fedoraFilter, err := filters.NewFedoraFilter(fedoraConfig, config.FedoraRepoPrefix, config.MaskRequest)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +134,7 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 			return nil, err
 		}
 
-		npmFilter, err := filters.NewNPMFilter(npmConfig)
+		npmFilter, err := filters.NewNPMFilter(npmConfig, config.MaskRequest)
 		if err != nil {
 			return nil, err
 		}
@@ -176,6 +177,7 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 		caPrivateKey:     caPrivateKey,
 		domainPrivateKey: domainPrivateKey,
 		logChannel:       logChannel,
+		maskRequest:      config.MaskRequest,
 	}
 
 	go func() {
@@ -216,13 +218,7 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for key, value := range r.Header {
-		if strings.ToLower(key) == "authorization" {
-			sb.WriteString(fmt.Sprintf("  %s: *******\n", key))
-		} else {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", key, strings.Join(value, ", ")))
-		}
-	}
+	printHeaders(&sb, r.Header, "  ")
 
 	filter, found := i.filters[r.Host]
 	if !found {
@@ -235,12 +231,26 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.URL.Scheme = "https"
 	r.URL.Host = r.Host
 
 	r, allowed := filter.Transform(r)
 	if !allowed {
 		sb.WriteString(fmt.Sprintf("request not allowed\n"))
+		w.WriteHeader(403)
+
+		i.logChannel <- handlerLog{
+			log: sb.String(),
+		}
+		return
+	}
+
+	if i.maskRequest && filter.MaskSupported() {
+		printHeaders(&sb, r.Header, "    ")
+	}
+
+	r.URL.Scheme = "https"
+	if r.URL.User != nil {
+		sb.WriteString(fmt.Sprintf("url user is not empty\n"))
 		w.WriteHeader(403)
 
 		i.logChannel <- handlerLog{
@@ -262,6 +272,16 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode < 100 {
+		sb.WriteString(fmt.Sprintf("status code less than 100: %d\n", response.StatusCode))
+		w.WriteHeader(500)
+
+		i.logChannel <- handlerLog{
+			log: sb.String(),
+		}
+		return
+	}
 
 	sb.WriteString(fmt.Sprintf("\n  StatusCode: %d\n", response.StatusCode))
 	for key, values := range response.Header {
@@ -312,6 +332,16 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 
 	i.logChannel <- handlerLog{
 		log: sb.String(),
+	}
+}
+
+func printHeaders(sb *strings.Builder, headers http.Header, prefix string) {
+	for key, value := range headers {
+		if strings.ToLower(key) == "authorization" {
+			sb.WriteString(fmt.Sprintf("%s%s: *******\n", prefix, key))
+		} else {
+			sb.WriteString(fmt.Sprintf("%s%s: %s\n", prefix, key, strings.Join(value, ", ")))
+		}
 	}
 }
 
