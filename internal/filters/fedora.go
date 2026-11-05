@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -11,10 +12,8 @@ import (
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
 
-// FIXME proper parsing
 var regexFedoraPackageName = regexp.MustCompile(`^[a-zA-Z0-9+_-]+(\.[a-zA-Z0-9+_-]+)*$`)
-var regexFedoraPart2 = regexp.MustCompile(`^[0-9a-z+^]+(\.[0-9a-z+^]+)*$`)
-var regexFedoraPart3 = regexp.MustCompile(`[0-9a-z]+\.fc44\.(x86_64|noarch)\.rpm|$`)
+var regexFedoraVersion = regexp.MustCompile(`^([0-9]:)?[0-9a-z]+(\.[0-9a-z]+){0,2}([+^_][0-9a-z]+(\.[0-9a-z]+){0,2})?-[0-9a-z]+(\.[0-9a-z]+){0,2}$`)
 
 var regexRepodata = regexp.MustCompile(`[0-9a-f]{64}-(updateinfo\.xml\.zck|comps-Everything\.x86_64\.xml\.zst|primary\.xml\.zck)`)
 
@@ -30,6 +29,7 @@ type FedoraFilter struct {
 	allowedHeaders map[string]*regexp.Regexp
 	maskRequest    bool
 	fedoraVersion  int
+	architecture   string
 }
 
 func NewFedoraFilter(allowedPackages []string, repoPrefix *url.URL, maskRequest bool) (*FedoraFilter, error) {
@@ -47,6 +47,7 @@ func NewFedoraFilter(allowedPackages []string, repoPrefix *url.URL, maskRequest 
 		packageTrie:   packageTrie,
 		maskRequest:   maskRequest,
 		fedoraVersion: 44,
+		architecture:  "x86_64",
 	}, nil
 }
 
@@ -64,7 +65,7 @@ func (f *FedoraFilter) Transform(r *http.Request) (*http.Request, bool) {
 		newRequest.Method = string(verbs.GET)
 		newRequest.Header = make(map[string][]string)
 
-		newRequest.Header.Set("User-Agent", "libdnf (Fedora Linux 44; server; Linux.x86_64)")
+		newRequest.Header.Set("User-Agent", fedoraUserAgent(f.fedoraVersion, f.architecture))
 		newRequest.Header.Set("Accept", "*/*")
 
 		if artifact.packageName == nil {
@@ -104,7 +105,7 @@ func (f *FedoraFilter) allowRequest(r *http.Request) (*fedoraArtifact, bool) {
 		return nil, false
 	}
 
-	if !verifyFedoraHeaders(r, f.fedoraVersion, artifact) {
+	if !verifyFedoraHeaders(r, f.fedoraVersion, f.architecture, artifact) {
 		return nil, false
 	}
 
@@ -141,7 +142,7 @@ func (f *FedoraFilter) verifyPath(r *http.Request) (*fedoraArtifact, bool) {
 		return nil, false
 	}
 
-	if parts[3] != "x86_64" {
+	if parts[3] != f.architecture {
 		return nil, false
 	}
 
@@ -199,35 +200,34 @@ func (f *FedoraFilter) verifyPackage(parts []string) (*string, bool) {
 	}
 
 	leadingCharacter := parts[0]
-	file := parts[1]
+	filename := parts[1]
 
-	if !strings.HasPrefix(strings.ToLower(string(file[0])), leadingCharacter) {
+	if !strings.HasPrefix(strings.ToLower(string(filename[0])), leadingCharacter) {
 		return nil, false
 	}
 
-	filenameParts := strings.Split(file, "-")
-	if len(filenameParts) < 3 {
+	fileSuffix := fmt.Sprintf(".fc%d.%s.rpm", f.fedoraVersion, f.architecture)
+	packageNameAndVersion, ok := strings.CutSuffix(filename, fileSuffix)
+	if !ok {
+		fileSuffix := fmt.Sprintf(".fc%d.%s.rpm", f.fedoraVersion, "noarch")
+		packageNameAndVersion, ok = strings.CutSuffix(filename, fileSuffix)
+		if !ok {
+			return nil, false
+		}
+	}
+
+	packageNameAndVersionParts := strings.Split(packageNameAndVersion, "-")
+	if len(packageNameAndVersionParts) < 3 {
 		return nil, false
 	}
 
-	packageNameRaw := strings.Join(filenameParts[0:len(filenameParts)-2], "-")
+	packageNameRaw := strings.Join(packageNameAndVersionParts[0:len(packageNameAndVersionParts)-2], "-")
 	packageName, err := url.PathUnescape(packageNameRaw)
 	if err != nil {
 		return nil, false
 	}
 
-	part2 := filenameParts[len(filenameParts)-2]
-	part3 := filenameParts[len(filenameParts)-1]
-
 	if !regexFedoraPackageName.MatchString(packageName) {
-		return nil, false
-	}
-
-	if !regexFedoraPart2.MatchString(part2) {
-		return nil, false
-	}
-
-	if !regexFedoraPart3.MatchString(part3) {
 		return nil, false
 	}
 
@@ -236,10 +236,15 @@ func (f *FedoraFilter) verifyPackage(parts []string) (*string, bool) {
 		return nil, false
 	}
 
+	version := strings.Join(packageNameAndVersionParts[len(packageNameAndVersionParts)-2:], "-")
+	if !regexFedoraVersion.MatchString(version) {
+		return nil, false
+	}
+
 	return &packageName, true
 }
 
-func verifyFedoraHeaders(r *http.Request, fedoraVersion int, artifact *fedoraArtifact) bool {
+func verifyFedoraHeaders(r *http.Request, fedoraVersion int, architecture string, artifact *fedoraArtifact) bool {
 	for k, v := range r.Header {
 		if len(v) != 1 {
 			return false
@@ -267,7 +272,7 @@ func verifyFedoraHeaders(r *http.Request, fedoraVersion int, artifact *fedoraArt
 				return false
 			}
 		case "User-Agent":
-			if v[0] != "libdnf (Fedora Linux "+strconv.Itoa(fedoraVersion)+"; server; Linux.x86_64)" {
+			if v[0] != fedoraUserAgent(fedoraVersion, architecture) {
 				return false
 			}
 		case "Range":
@@ -278,4 +283,8 @@ func verifyFedoraHeaders(r *http.Request, fedoraVersion int, artifact *fedoraArt
 	}
 
 	return true
+}
+
+func fedoraUserAgent(version int, architecture string) string {
+	return fmt.Sprintf("libdnf (Fedora Linux %d; server; Linux.%s)", version, architecture)
 }
