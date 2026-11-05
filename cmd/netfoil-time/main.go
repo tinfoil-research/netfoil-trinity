@@ -182,6 +182,8 @@ func applySystemCallFilter(filter bool) error {
 			unix.SYS_SETSOCKOPT,
 			unix.SYS_RECVFROM,
 			unix.SYS_SENDTO,
+
+			unix.SYS_NEWFSTATAT,
 		}
 
 		argumentFilters := seccomp.ArgumentFilters{

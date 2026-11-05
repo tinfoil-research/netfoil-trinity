@@ -146,6 +146,8 @@ func applySystemCallFilter(filter bool) error {
 			unix.SYS_ACCEPT4,
 			unix.SYS_GETSOCKNAME,
 			unix.SYS_SETSOCKOPT,
+
+			unix.SYS_NEWFSTATAT,
 		}
 
 		argumentFilters := seccomp.ArgumentFilters{
