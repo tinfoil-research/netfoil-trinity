@@ -113,3 +113,7 @@ func (f *GenericFilter) Transform(r *http.Request) (*http.Request, bool) {
 
 	return r, true
 }
+
+func (f *GenericFilter) MaskSupported() bool {
+	return false
+}

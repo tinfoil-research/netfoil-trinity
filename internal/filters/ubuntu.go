@@ -104,6 +104,10 @@ func (f *UbuntuFilter) Transform(r *http.Request) (*http.Request, bool) {
 	return nil, false
 }
 
+func (f *UbuntuFilter) MaskSupported() bool {
+	return false
+}
+
 func (f *UbuntuFilter) matchFixed(r *http.Request, distPrefix string) bool {
 	if after, ok := strings.CutPrefix(r.RequestURI, distPrefix); ok {
 		if !regexDebianPath.MatchString(after) {

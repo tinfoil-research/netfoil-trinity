@@ -91,7 +91,7 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 			return nil, err
 		}
 
-		fedoraFilter, err := filters.NewFedoraFilter(fedoraConfig, config.FedoraRepoPrefix)
+		fedoraFilter, err := filters.NewFedoraFilter(fedoraConfig, config.FedoraRepoPrefix, config.MaskRequest)
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +244,7 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if i.maskRequest {
+	if i.maskRequest && filter.MaskSupported() {
 		printHeaders(&sb, r.Header, "    ")
 	}
 

@@ -109,6 +109,10 @@ func (f *NPMFilter) Transform(r *http.Request) (*http.Request, bool) {
 	return r, true
 }
 
+func (f *NPMFilter) MaskSupported() bool {
+	return true
+}
+
 func generateRawPath(artifact *npmArtifact) string {
 	if artifact.filename == nil {
 		id := artifact.packageName

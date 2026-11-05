@@ -141,6 +141,10 @@ func (f *DebianFilter) Transform(r *http.Request) (*http.Request, bool) {
 	return nil, false
 }
 
+func (f *DebianFilter) MaskSupported() bool {
+	return false
+}
+
 func verifyHeaders(r *http.Request, allowedHeaders map[string]*regexp.Regexp) bool {
 	for k, v := range r.Header {
 		if len(v) != 1 {
