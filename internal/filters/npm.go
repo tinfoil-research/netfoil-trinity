@@ -240,6 +240,8 @@ func (f *NPMFilter) allowPackage(r *http.Request) (*npmArtifact, bool, error) {
 		if !found {
 			return nil, false, nil
 		}
+	} else {
+		return nil, false, nil
 	}
 
 	if !verifyNPMHeaders(r, &result) {
