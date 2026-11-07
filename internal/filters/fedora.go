@@ -82,6 +82,8 @@ func (f *FedoraFilter) Transform(r *http.Request) (*http.Request, bool) {
 				newRequest.Header.Set("Range", rangeValue)
 			}
 		}
+
+		r = newRequest
 	}
 
 	return r, true
@@ -293,6 +295,8 @@ func verifyFedoraHeaders(r *http.Request, fedoraVersion int, architecture string
 			if !regexHeaderRange.MatchString(v[0]) {
 				return false
 			}
+		default:
+			return false
 		}
 	}
 
