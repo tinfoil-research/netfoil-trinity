@@ -13,9 +13,14 @@ import (
 )
 
 var regexFedoraPackageName = regexp.MustCompile(`^[a-zA-Z0-9+_-]+(\.[a-zA-Z0-9+_-]+)*$`)
-var regexFedoraVersion = regexp.MustCompile(`^([0-9]:)?[0-9]+(\.[0-9]+){0,2}([+^_.][0-9a-z]+(\.[0-9a-z]+){0,2})?-[0-9a-z]+(\.[0-9a-z]+){0,2}$`)
+var regexFedoraVersion = regexp.MustCompile(`^([0-9]:)?[0-9a-z]+(\.[0-9a-z]+){0,4}([+^_][0-9a-z]+(\.[0-9a-z]+){0,2})?-[0-9a-z]+(\.[0-9a-z]+){0,4}$`)
 
 var regexRepodata = regexp.MustCompile(`[0-9a-f]{64}-(updateinfo\.xml\.zck|comps-Everything\.x86_64\.xml\.zst|primary\.xml\.zck)`)
+
+const (
+	fedoraServer    = "server"
+	fedoraContainer = "container"
+)
 
 type fedoraArtifact struct {
 	packageName *string
@@ -65,7 +70,7 @@ func (f *FedoraFilter) Transform(r *http.Request) (*http.Request, bool) {
 		newRequest.Method = string(verbs.GET)
 		newRequest.Header = make(map[string][]string)
 
-		newRequest.Header.Set("User-Agent", fedoraUserAgent(f.fedoraVersion, f.architecture))
+		newRequest.Header.Set("User-Agent", fedoraUserAgent(f.fedoraVersion, f.architecture, fedoraServer))
 		newRequest.Header.Set("Accept", "*/*")
 
 		if artifact.packageName == nil {
@@ -240,7 +245,12 @@ func (f *FedoraFilter) verifyPackage(parts []string) (*string, bool) {
 		return nil, false
 	}
 
-	version := strings.Join(packageNameAndVersionParts[len(packageNameAndVersionParts)-2:], "-")
+	versionRaw := strings.Join(packageNameAndVersionParts[len(packageNameAndVersionParts)-2:], "-")
+	version, err := url.PathUnescape(versionRaw)
+	if err != nil {
+		return nil, false
+	}
+
 	if !regexFedoraVersion.MatchString(version) {
 		return nil, false
 	}
@@ -276,7 +286,7 @@ func verifyFedoraHeaders(r *http.Request, fedoraVersion int, architecture string
 				return false
 			}
 		case "User-Agent":
-			if v[0] != fedoraUserAgent(fedoraVersion, architecture) {
+			if !(v[0] == fedoraUserAgent(fedoraVersion, architecture, fedoraServer) || v[0] == fedoraUserAgent(fedoraVersion, architecture, fedoraContainer)) {
 				return false
 			}
 		case "Range":
@@ -289,6 +299,6 @@ func verifyFedoraHeaders(r *http.Request, fedoraVersion int, architecture string
 	return true
 }
 
-func fedoraUserAgent(version int, architecture string) string {
-	return fmt.Sprintf("libdnf (Fedora Linux %d; server; Linux.%s)", version, architecture)
+func fedoraUserAgent(version int, architecture string, t string) string {
+	return fmt.Sprintf("libdnf (Fedora Linux %d; %s; Linux.%s)", version, t, architecture)
 }

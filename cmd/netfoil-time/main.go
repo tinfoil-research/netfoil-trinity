@@ -94,6 +94,8 @@ func processInput() (*Options, error) {
 }
 
 func process(conn *net.UDPConn) {
+	localIP := conn.LocalAddr().(*net.UDPAddr).IP
+
 	for {
 		buf := make([]byte, 1024)
 		responseLength, remote, err := conn.ReadFromUDP(buf[:])
@@ -102,10 +104,15 @@ func process(conn *net.UDPConn) {
 			continue
 		}
 
+		if localIP.Equal(remote.IP) {
+			continue
+		}
+
 		fmt.Printf("request from %s\n", remote.String())
 		response, err := processSNTP(buf[:responseLength])
 		if err != nil {
 			println(err.Error())
+			continue
 		}
 
 		n, err := conn.WriteToUDP(response, remote)
@@ -122,6 +129,10 @@ func processSNTP(data []byte) ([]byte, error) {
 	packet, err := time.Decode(data)
 	if err != nil {
 		return nil, err
+	}
+
+	if packet.Mode != 3 {
+		return nil, fmt.Errorf("expected packet mode client, got %d", packet.Mode)
 	}
 
 	nowSeconds, nowFraction := time.Now()
