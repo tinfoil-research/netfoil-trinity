@@ -15,7 +15,7 @@ import (
 var regexFedoraPackageName = regexp.MustCompile(`^[a-zA-Z0-9+_-]+(\.[a-zA-Z0-9+_-]+)*$`)
 var regexFedoraVersion = regexp.MustCompile(`^([0-9]:)?[0-9a-z]+(\.[0-9a-z]+){0,4}([+^_][0-9a-z]+(\.[0-9a-z]+){0,2})?-[0-9a-z]+(\.[0-9a-z]+){0,4}$`)
 
-var regexRepodata = regexp.MustCompile(`[0-9a-f]{64}-(updateinfo\.xml\.zck|comps-Everything\.x86_64\.xml\.zst|primary\.xml\.zck)`)
+var regexRepodata = regexp.MustCompile(`[0-9a-f]{64}-(updateinfo\.xml\.zck|comps-Everything\.x86_64\.xml\.zst|primary\.xml\.zck)$`)
 
 const (
 	fedoraServer    = "server"
@@ -158,6 +158,10 @@ func (f *FedoraFilter) verifyPath(r *http.Request) (*fedoraArtifact, bool) {
 	allow := false
 	switch parts[4] {
 	case "repodata":
+		if len(parts) != 6 {
+			return nil, false
+		}
+
 		if parts[5] != repomdxml {
 			if !regexRepodata.MatchString(parts[5]) {
 				return nil, false
@@ -178,6 +182,7 @@ func (f *FedoraFilter) verifyPath(r *http.Request) (*fedoraArtifact, bool) {
 			if len(parts) != 7 {
 				return nil, false
 			}
+
 			if parts[6] != repomdxml {
 				if !regexRepodata.MatchString(parts[6]) {
 					return nil, false
