@@ -16,7 +16,7 @@ include <tunables/global>
   /run/credentials/netfoil-hi@*.service/* r,
 
   /etc/resolv.conf r,
-  /etc/nsswitch.con r,
+  /etc/nsswitch.conf r,
   /etc/hosts r,
 
   deny /** x,
