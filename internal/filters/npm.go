@@ -74,36 +74,39 @@ func (f *NPMFilter) Transform(r *http.Request) (*http.Request, bool) {
 			rawPath = ""
 		}
 
-		r = &http.Request{}
-		r.Method = string(verbs.GET)
-		r.URL = &url.URL{
+		newRequest := &http.Request{}
+		newRequest = newRequest.WithContext(r.Context())
+		newRequest.Method = string(verbs.GET)
+		newRequest.URL = &url.URL{
 			Scheme:  "https",
 			Host:    "registry.npmjs.org",
 			Path:    path,
 			RawPath: rawPath,
 		}
 
-		r.Header = make(map[string][]string)
+		newRequest.Header = make(map[string][]string)
 
-		r.Header.Set("Npm-Auth-Type", "web")
-		r.Header.Set("Npm-Command", "install")
+		newRequest.Header.Set("Npm-Auth-Type", "web")
+		newRequest.Header.Set("Npm-Command", "install")
 
-		r.Header.Set("Accept-Encoding", "gzip,deflate")
-		r.Header.Set("Connection", "keep-alive")
+		newRequest.Header.Set("Accept-Encoding", "gzip,deflate")
+		newRequest.Header.Set("Connection", "keep-alive")
 
-		r.Header.Set("User-Agent", "npm/10.9.8 node/v22.23.1 linux x64 workspaces/false")
+		newRequest.Header.Set("User-Agent", "npm/10.9.8 node/v22.23.1 linux x64 workspaces/false")
 
 		pkgId := generatePacotePkgId(artifact)
-		r.Header.Set("Pacote-Pkg-Id", pkgId)
-		r.Header.Set("Pacote-Version", "19.0.2")
+		newRequest.Header.Set("Pacote-Pkg-Id", pkgId)
+		newRequest.Header.Set("Pacote-Version", "19.0.2")
 
 		if artifact.filename == nil {
-			r.Header.Set("Accept", "application/json")
-			r.Header.Set("Pacote-Req-Type", "packument")
+			newRequest.Header.Set("Accept", "application/json")
+			newRequest.Header.Set("Pacote-Req-Type", "packument")
 		} else {
-			r.Header.Set("Accept", "*/*")
-			r.Header.Set("Pacote-Req-Type", "tarball")
+			newRequest.Header.Set("Accept", "*/*")
+			newRequest.Header.Set("Pacote-Req-Type", "tarball")
 		}
+
+		r = newRequest
 	}
 
 	return r, true
