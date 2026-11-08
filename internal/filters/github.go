@@ -9,18 +9,18 @@ import (
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
 
-var regexGitHubOrg = regexp.MustCompile("^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$")
-var regexGitHubRepo = regexp.MustCompile("^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$")
+var regexGitHubOrg = regexp.MustCompile(`^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$`)
+var regexGitHubRepo = regexp.MustCompile(`^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$`)
 
-var regexGitHubHeaderPragma = regexp.MustCompile("^no-cache$")
-var regexGitHubHeaderGitProtocol = regexp.MustCompile("^version=2$")
-var regexGitHubHeaderUserAgent = regexp.MustCompile("^[a-z0-9./]+$")
-var regexGitHubHeaderAccept = regexp.MustCompile("^*/*$")
-var regexGitHubHeaderAcceptEncoding = regexp.MustCompile("^[a-z, ]+$")
-var regexGitHubHeaderAcceptLanguage = regexp.MustCompile("^[a-zA-Z0-9;=*., -]+$")
-var regexGitHubHeaderContentType = regexp.MustCompile("^application/x-git-upload-pack-request$")
-var regexGitHubHeaderContentLength = regexp.MustCompile("^[0-9]+$")
-var regexGitHubHeaderContentEncoding = regexp.MustCompile("^gzip$")
+var regexGitHubHeaderPragma = regexp.MustCompile(`^no-cache$`)
+var regexGitHubHeaderGitProtocol = regexp.MustCompile(`^version=2$`)
+var regexGitHubHeaderUserAgent = regexp.MustCompile(`^[a-z0-9./]+$`)
+var regexGitHubHeaderAccept = regexp.MustCompile(`^(\*/\*|application/x-git-upload-pack-result)$`)
+var regexGitHubHeaderAcceptEncoding = regexp.MustCompile(`^[a-z, ]+$`)
+var regexGitHubHeaderAcceptLanguage = regexp.MustCompile(`^[a-zA-Z0-9;=*., -]+$`)
+var regexGitHubHeaderContentType = regexp.MustCompile(`^application/x-git-upload-pack-request$`)
+var regexGitHubHeaderContentLength = regexp.MustCompile(`^[0-9]+$`)
+var regexGitHubHeaderContentEncoding = regexp.MustCompile(`^gzip$`)
 
 type GitHubFilter struct {
 	trie           trie.Node

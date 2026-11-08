@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -190,7 +191,7 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 }
 
 func (i *Interceptor) GetCertificate(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	fmt.Printf("cert %s\n", clientHello.ServerName)
+	fmt.Printf("cert %s\n", url.PathEscape(clientHello.ServerName))
 
 	cert, found := i.certs.Load(clientHello.ServerName)
 	if !found {
@@ -273,8 +274,8 @@ func (i *Interceptor) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode < 100 {
-		sb.WriteString(fmt.Sprintf("status code less than 100: %d\n", response.StatusCode))
+	if response.StatusCode < 100 || response.StatusCode > 999 {
+		sb.WriteString(fmt.Sprintf("status code out of range: %d\n", response.StatusCode))
 		w.WriteHeader(500)
 
 		i.logChannel <- handlerLog{
@@ -356,7 +357,7 @@ func (i *Interceptor) ConnState(conn net.Conn, state http.ConnState) {
 func (i *Interceptor) createAndStoreCertificate(domain string) (*tls.Certificate, error) {
 	cert, err := createDomainCert(domain, i.caCert, i.caPrivateKey, i.domainPrivateKey)
 	if err != nil {
-		fmt.Printf("error creating certificate for domain '%s': %s\n", domain, err)
+		fmt.Printf("error creating certificate for domain '%s': %s\n", url.PathEscape(domain), err)
 		return nil, err
 	}
 
