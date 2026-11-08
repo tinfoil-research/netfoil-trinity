@@ -64,6 +64,7 @@ func (f *FedoraFilter) Transform(r *http.Request) (*http.Request, bool) {
 
 	if f.maskRequest {
 		newRequest := &http.Request{}
+		newRequest = newRequest.WithContext(r.Context())
 		newRequest.Host = r.Host
 		newRequest.URL = r.URL
 

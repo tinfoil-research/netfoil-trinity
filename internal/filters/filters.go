@@ -30,13 +30,14 @@ func (f *BasicGETFilter) Transform(r *http.Request) (*http.Request, bool) {
 }
 
 func errOnNonEmptyBody(r *http.Request) error {
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
+	buffer := make([]byte, 1)
+	n, err := r.Body.Read(buffer)
+	if err != nil && err != io.EOF {
 		return err
 	}
 
-	if len(data) > 0 {
-		return fmt.Errorf("expected non-empty body, got length %d", len(data))
+	if n > 0 {
+		return fmt.Errorf("expected non-empty body")
 	}
 
 	r.Body = nil
