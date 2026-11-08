@@ -228,10 +228,14 @@ func (f *FedoraFilter) verifyPackage(parts []string) (*string, bool) {
 	fileSuffix := fmt.Sprintf(".fc%d.%s.rpm", f.fedoraVersion, f.architecture)
 	packageNameAndVersion, ok := strings.CutSuffix(filename, fileSuffix)
 	if !ok {
-		fileSuffix := fmt.Sprintf(".fc%d.%s.rpm", f.fedoraVersion, "noarch")
+		fileSuffix = fmt.Sprintf(".fc%d.noarch.rpm", f.fedoraVersion)
 		packageNameAndVersion, ok = strings.CutSuffix(filename, fileSuffix)
 		if !ok {
-			return nil, false
+			fileSuffix = fmt.Sprintf(".noarch.rpm")
+			packageNameAndVersion, ok = strings.CutSuffix(filename, fileSuffix)
+			if !ok {
+				return nil, false
+			}
 		}
 	}
 
