@@ -134,16 +134,16 @@ func (f *GitHubFilter) Transform(r *http.Request) (*http.Request, bool) {
 	}
 
 	if suffix == "git-upload-pack" && r.Method == string(verbs.POST) {
-		if f.authorizationHeaderValue != nil {
-			r.Header.Set("Authorization", *f.authorizationHeaderValue)
-		}
-
 		_, found := f.readTrie.Match([]byte(slug))
 		if !found {
 			_, found := f.readWriteTrie.Match([]byte(slug))
 			if !found {
 				return nil, false
 			}
+		}
+
+		if f.authorizationHeaderValue != nil {
+			r.Header.Set("Authorization", *f.authorizationHeaderValue)
 		}
 
 		return r, true
