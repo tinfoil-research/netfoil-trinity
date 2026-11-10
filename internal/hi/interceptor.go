@@ -110,12 +110,17 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 			}
 		}
 
-		gitHubConfig, err := readConfig(configDirectory, filepath.Join("providers", "github"))
+		gitHubReadConfig, err := readConfig(configDirectory, filepath.Join("providers", "github.read"))
 		if err != nil {
 			return nil, err
 		}
 
-		gitHubFilter, err := filters.NewGitHubFilter(gitHubConfig, githubToken)
+		gitHubReadWriteConfig, err := readConfig(configDirectory, filepath.Join("providers", "github.readwrite"))
+		if err != nil {
+			return nil, err
+		}
+
+		gitHubFilter, err := filters.NewGitHubFilter(gitHubReadConfig, gitHubReadWriteConfig, githubToken)
 		if err != nil {
 			return nil, err
 		}

@@ -17,24 +17,33 @@ var regexGitHubRepo = regexp.MustCompile(`^[a-zA-Z0-9]+(-[a-zA-Z0-9]+)*$`)
 var regexGitHubHeaderPragma = regexp.MustCompile(`^no-cache$`)
 var regexGitHubHeaderGitProtocol = regexp.MustCompile(`^version=2$`)
 var regexGitHubHeaderUserAgent = regexp.MustCompile(`^[a-z0-9./]+$`)
-var regexGitHubHeaderAccept = regexp.MustCompile(`^(\*/\*|application/x-git-upload-pack-result)$`)
+var regexGitHubHeaderAccept = regexp.MustCompile(`^(\*/\*|application/x-git-upload-pack-result|application/x-git-receive-pack-result)$`)
 var regexGitHubHeaderAcceptEncoding = regexp.MustCompile(`^[a-z, ]+$`)
 var regexGitHubHeaderAcceptLanguage = regexp.MustCompile(`^[a-zA-Z0-9;=*., -]+$`)
-var regexGitHubHeaderContentType = regexp.MustCompile(`^application/x-git-upload-pack-request$`)
+var regexGitHubHeaderContentType = regexp.MustCompile(`^(application/x-git-upload-pack-request|application/x-git-receive-pack-request)$`)
 var regexGitHubHeaderContentLength = regexp.MustCompile(`^[0-9]+$`)
 var regexGitHubHeaderContentEncoding = regexp.MustCompile(`^gzip$`)
 var regexGitHubHeaderAuthorization = regexp.MustCompile(`^Basic [a-zA-Z0-9]+$`)
 
 type GitHubFilter struct {
-	trie                     trie.Node
+	readTrie                 trie.Node
+	readWriteTrie            trie.Node
 	allowedHeaders           map[string]*regexp.Regexp
 	authorizationHeaderValue *string
 }
 
-func NewGitHubFilter(allowedRepos []string, token *string) (*GitHubFilter, error) {
-	t := trie.Node{}
-	for _, repo := range allowedRepos {
-		err := t.Insert(repo, nil)
+func NewGitHubFilter(allowedReadRepos []string, allowedReadWriteRepos []string, token *string) (*GitHubFilter, error) {
+	readTrie := trie.Node{}
+	for _, repo := range allowedReadRepos {
+		err := readTrie.Insert(repo, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	readWriteTrie := trie.Node{}
+	for _, repo := range allowedReadWriteRepos {
+		err := readWriteTrie.Insert(repo, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +57,8 @@ func NewGitHubFilter(allowedRepos []string, token *string) (*GitHubFilter, error
 
 	allowedHeaders := gitHubAllowedHeaders(token != nil)
 	return &GitHubFilter{
-		trie:                     t,
+		readTrie:                 readTrie,
+		readWriteTrie:            readWriteTrie,
 		allowedHeaders:           allowedHeaders,
 		authorizationHeaderValue: authorizationHeaderValue,
 	}, nil
@@ -93,21 +103,12 @@ func (f *GitHubFilter) Transform(r *http.Request) (*http.Request, bool) {
 		return nil, false
 	}
 
-	if strings.HasPrefix(parts[2], ".git") {
-		return nil, false
-	}
 	repo := strings.TrimSuffix(parts[2], ".git")
-
 	if !regexGitHubRepo.MatchString(repo) {
 		return nil, false
 	}
 
 	slug := org + "/" + repo
-
-	_, found := f.trie.Match([]byte(slug))
-	if !found {
-		return nil, false
-	}
 
 	suffix := strings.Join(parts[3:], "/")
 
@@ -115,6 +116,14 @@ func (f *GitHubFilter) Transform(r *http.Request) (*http.Request, bool) {
 		err := errOnNonEmptyBody(r)
 		if err != nil {
 			return nil, false
+		}
+
+		_, found := f.readTrie.Match([]byte(slug))
+		if !found {
+			_, found := f.readWriteTrie.Match([]byte(slug))
+			if !found {
+				return nil, false
+			}
 		}
 
 		if f.authorizationHeaderValue != nil {
@@ -125,6 +134,45 @@ func (f *GitHubFilter) Transform(r *http.Request) (*http.Request, bool) {
 	}
 
 	if suffix == "git-upload-pack" && r.Method == string(verbs.POST) {
+		if f.authorizationHeaderValue != nil {
+			r.Header.Set("Authorization", *f.authorizationHeaderValue)
+		}
+
+		_, found := f.readTrie.Match([]byte(slug))
+		if !found {
+			_, found := f.readWriteTrie.Match([]byte(slug))
+			if !found {
+				return nil, false
+			}
+		}
+
+		return r, true
+	}
+
+	if suffix == "info/refs?service=git-receive-pack" && r.Method == string(verbs.GET) {
+		err := errOnNonEmptyBody(r)
+		if err != nil {
+			return nil, false
+		}
+
+		_, found := f.readWriteTrie.Match([]byte(slug))
+		if !found {
+			return nil, false
+		}
+
+		if f.authorizationHeaderValue != nil {
+			r.Header.Set("Authorization", *f.authorizationHeaderValue)
+		}
+
+		return r, true
+	}
+
+	if suffix == "git-receive-pack" && r.Method == string(verbs.POST) {
+		_, found := f.readWriteTrie.Match([]byte(slug))
+		if !found {
+			return nil, false
+		}
+
 		if f.authorizationHeaderValue != nil {
 			r.Header.Set("Authorization", *f.authorizationHeaderValue)
 		}
