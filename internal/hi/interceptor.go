@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -101,12 +102,25 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 	}
 
 	if config.EnableGitHub {
-		gitHubConfig, err := readConfig(configDirectory, filepath.Join("providers", "github"))
+		var githubToken *string = nil
+		if config.EnableGitHubAuthentication {
+			githubToken, err = readToken(configDirectory, "github-token")
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		gitHubReadConfig, err := readConfig(configDirectory, filepath.Join("providers", "github.read"))
 		if err != nil {
 			return nil, err
 		}
 
-		gitHubFilter, err := filters.NewGitHubFilter(gitHubConfig)
+		gitHubReadWriteConfig, err := readConfig(configDirectory, filepath.Join("providers", "github.readwrite"))
+		if err != nil {
+			return nil, err
+		}
+
+		gitHubFilter, err := filters.NewGitHubFilter(gitHubReadConfig, gitHubReadWriteConfig, githubToken)
 		if err != nil {
 			return nil, err
 		}
@@ -188,6 +202,17 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 	}()
 
 	return &interceptor, nil
+}
+
+func readToken(configDirectory string, name string) (*string, error) {
+	configPath := filepath.Join(configDirectory, name)
+	token, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	result := strings.TrimSpace(string(token))
+	return &result, nil
 }
 
 func (i *Interceptor) GetCertificate(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {

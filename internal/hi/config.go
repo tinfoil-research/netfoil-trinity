@@ -11,15 +11,16 @@ import (
 )
 
 type Config struct {
-	EnableDebian     bool
-	EnableUbuntu     bool
-	EnableFedora     bool
-	FedoraRepoPrefix *url.URL
-	EnableGitHub     bool
-	EnableGo         bool
-	EnableNPM        bool
-	EnableDocker     bool
-	MaskRequest      bool
+	EnableDebian               bool
+	EnableUbuntu               bool
+	EnableFedora               bool
+	FedoraRepoPrefix           *url.URL
+	EnableGitHub               bool
+	EnableGitHubAuthentication bool
+	EnableGo                   bool
+	EnableNPM                  bool
+	EnableDocker               bool
+	MaskRequest                bool
 }
 
 func ReadConfigFile(configDirectory string) (*Config, error) {
@@ -48,15 +49,16 @@ func ReadConfigFile(configDirectory string) (*Config, error) {
 type ConfigKey string
 
 const (
-	keyEnableDebian     ConfigKey = "EnableDebian"
-	keyEnableUbuntu     ConfigKey = "EnableUbuntu"
-	keyEnableFedora     ConfigKey = "EnableFedora"
-	keyFedoraRepoPrefix ConfigKey = "FedoraRepoPrefix"
-	keyEnableGitHub     ConfigKey = "EnableGitHub"
-	keyEnableGo         ConfigKey = "EnableGo"
-	keyEnableNPM        ConfigKey = "EnableNPM"
-	keyEnableDocker     ConfigKey = "EnableDocker"
-	keyMaskRequest      ConfigKey = "MaskRequest"
+	keyEnableDebian               ConfigKey = "EnableDebian"
+	keyEnableUbuntu               ConfigKey = "EnableUbuntu"
+	keyEnableFedora               ConfigKey = "EnableFedora"
+	keyFedoraRepoPrefix           ConfigKey = "FedoraRepoPrefix"
+	keyEnableGitHub               ConfigKey = "EnableGitHub"
+	keyEnableGitHubAuthentication ConfigKey = "EnableGitHubAuthentication"
+	keyEnableGo                   ConfigKey = "EnableGo"
+	keyEnableNPM                  ConfigKey = "EnableNPM"
+	keyEnableDocker               ConfigKey = "EnableDocker"
+	keyMaskRequest                ConfigKey = "MaskRequest"
 )
 
 type ConfigMap struct {
@@ -117,6 +119,7 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		keyEnableFedora,
 		keyFedoraRepoPrefix,
 		keyEnableGitHub,
+		keyEnableGitHubAuthentication,
 		keyEnableGo,
 		keyEnableNPM,
 		keyEnableDocker,
@@ -186,6 +189,11 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		return nil, err
 	}
 
+	enableGitHubAuthentication, err := configMap.getBool(keyEnableGitHubAuthentication, false)
+	if err != nil {
+		return nil, err
+	}
+
 	enableGo, err := configMap.getBool(keyEnableGo, false)
 	if err != nil {
 		return nil, err
@@ -207,15 +215,16 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 	}
 
 	return &Config{
-		EnableDebian:     enableDebian,
-		EnableUbuntu:     enableUbuntu,
-		EnableFedora:     enableFedora,
-		FedoraRepoPrefix: fedoraRepoPrefix,
-		EnableGitHub:     enableGitHub,
-		EnableGo:         enableGo,
-		EnableNPM:        enableNPM,
-		EnableDocker:     enableDocker,
-		MaskRequest:      maskRequest,
+		EnableDebian:               enableDebian,
+		EnableUbuntu:               enableUbuntu,
+		EnableFedora:               enableFedora,
+		FedoraRepoPrefix:           fedoraRepoPrefix,
+		EnableGitHub:               enableGitHub,
+		EnableGitHubAuthentication: enableGitHubAuthentication,
+		EnableGo:                   enableGo,
+		EnableNPM:                  enableNPM,
+		EnableDocker:               enableDocker,
+		MaskRequest:                maskRequest,
 	}, nil
 }
 
