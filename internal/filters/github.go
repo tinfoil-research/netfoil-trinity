@@ -1,6 +1,8 @@
 package filters
 
 import (
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -21,13 +23,15 @@ var regexGitHubHeaderAcceptLanguage = regexp.MustCompile(`^[a-zA-Z0-9;=*., -]+$`
 var regexGitHubHeaderContentType = regexp.MustCompile(`^application/x-git-upload-pack-request$`)
 var regexGitHubHeaderContentLength = regexp.MustCompile(`^[0-9]+$`)
 var regexGitHubHeaderContentEncoding = regexp.MustCompile(`^gzip$`)
+var regexGitHubHeaderAuthorization = regexp.MustCompile(`^Basic [a-zA-Z0-9]+$`)
 
 type GitHubFilter struct {
-	trie           trie.Node
-	allowedHeaders map[string]*regexp.Regexp
+	trie                     trie.Node
+	allowedHeaders           map[string]*regexp.Regexp
+	authorizationHeaderValue *string
 }
 
-func NewGitHubFilter(allowedRepos []string) (*GitHubFilter, error) {
+func NewGitHubFilter(allowedRepos []string, token *string) (*GitHubFilter, error) {
 	t := trie.Node{}
 	for _, repo := range allowedRepos {
 		err := t.Insert(repo, nil)
@@ -36,14 +40,21 @@ func NewGitHubFilter(allowedRepos []string) (*GitHubFilter, error) {
 		}
 	}
 
-	allowedHeaders := gitHubAllowedHeaders()
+	var authorizationHeaderValue *string = nil
+	if token != nil {
+		encodedToken := encodeToken(*token)
+		authorizationHeaderValue = &encodedToken
+	}
+
+	allowedHeaders := gitHubAllowedHeaders(token != nil)
 	return &GitHubFilter{
-		trie:           t,
-		allowedHeaders: allowedHeaders,
+		trie:                     t,
+		allowedHeaders:           allowedHeaders,
+		authorizationHeaderValue: authorizationHeaderValue,
 	}, nil
 }
 
-func gitHubAllowedHeaders() map[string]*regexp.Regexp {
+func gitHubAllowedHeaders(allowAuthorizationHeader bool) map[string]*regexp.Regexp {
 	allowedHeaders := make(map[string]*regexp.Regexp)
 	allowedHeaders["Pragma"] = regexGitHubHeaderPragma
 	allowedHeaders["Git-Protocol"] = regexGitHubHeaderGitProtocol
@@ -54,6 +65,10 @@ func gitHubAllowedHeaders() map[string]*regexp.Regexp {
 	allowedHeaders["Content-Type"] = regexGitHubHeaderContentType
 	allowedHeaders["Content-Length"] = regexGitHubHeaderContentLength
 	allowedHeaders["Content-Encoding"] = regexGitHubHeaderContentEncoding
+
+	if allowAuthorizationHeader {
+		allowedHeaders["Authorization"] = regexGitHubHeaderAuthorization
+	}
 
 	return allowedHeaders
 }
@@ -102,10 +117,18 @@ func (f *GitHubFilter) Transform(r *http.Request) (*http.Request, bool) {
 			return nil, false
 		}
 
+		if f.authorizationHeaderValue != nil {
+			r.Header.Set("Authorization", *f.authorizationHeaderValue)
+		}
+
 		return r, true
 	}
 
 	if suffix == "git-upload-pack" && r.Method == string(verbs.POST) {
+		if f.authorizationHeaderValue != nil {
+			r.Header.Set("Authorization", *f.authorizationHeaderValue)
+		}
+
 		return r, true
 	}
 
@@ -114,4 +137,11 @@ func (f *GitHubFilter) Transform(r *http.Request) (*http.Request, bool) {
 
 func (f *GitHubFilter) MaskSupported() bool {
 	return false
+}
+
+func encodeToken(token string) string {
+	basic := fmt.Sprintf("x-access-token:%s", token)
+	encoded := base64.StdEncoding.EncodeToString([]byte(basic))
+	authorization := fmt.Sprintf("Basic %s", encoded)
+	return authorization
 }
