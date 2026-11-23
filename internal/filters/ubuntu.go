@@ -2,6 +2,7 @@ package filters
 
 import (
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -28,11 +29,15 @@ func NewUbuntuFilter(allowedPackages []string) (*UbuntuFilter, error) {
 		"InRelease",
 
 		"main/binary-amd64/by-hash/SHA256/*",
+		"main/i18n/by-hash/SHA256/*",
 		"main/dep11/by-hash/SHA256/*",
 
 		"universe/binary-amd64/by-hash/SHA256/*",
 		"universe/i18n/by-hash/SHA256/*",
 		"universe/dep11/by-hash/SHA256/*",
+
+		"restricted/binary-amd64/by-hash/SHA256/*",
+		"restricted/i18n/by-hash/SHA256/*",
 	}
 
 	fixedTrie := trie.Node{}
@@ -133,7 +138,7 @@ func (f *UbuntuFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 
 		prefix := parts[0]
 		packageName := parts[1]
-		file := parts[2]
+		filenameEscaped := parts[2]
 
 		if !strings.HasPrefix(packageName, prefix) {
 			return false
@@ -148,7 +153,12 @@ func (f *UbuntuFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 			return false
 		}
 
-		if !regexDebianFilename.MatchString(file) {
+		filename, err := url.PathUnescape(filenameEscaped)
+		if err != nil {
+			return false
+		}
+
+		if !regexDebianFilename.MatchString(filename) {
 			return false
 		}
 

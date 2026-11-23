@@ -2,6 +2,7 @@ package filters
 
 import (
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -9,10 +10,10 @@ import (
 	"github.com/tinfoil-research/netfoil-trinity/internal/verbs"
 )
 
-var regexDebianPackageName = regexp.MustCompile("^[a-z0-9-]+$")
+var regexDebianPackageName = regexp.MustCompile("^[a-z0-9]+([-.][a-z0-9]+)*$")
 
 // FIXME %
-var regexDebianFilename = regexp.MustCompile("^[a-z0-9_-]+(\\.[%a-z0-9_-]+)*\\.deb$")
+var regexDebianFilename = regexp.MustCompile("^[a-zA-Z0-9~+_-]+(\\.[a-zA-Z0-9~+_-]+)*\\.deb$")
 var regexDebianPath = regexp.MustCompile("^[a-zA-Z0-9-]+(/[a-zA-Z0-9-]+)*(\\.yml|\\.yml\\.gz|\\.xz|\\.tar\\.gz)?$")
 
 var regexDebianHeaderIfModifiedSince = regexp.MustCompile("^[a-zA-Z0-9,: ]+$")
@@ -189,7 +190,7 @@ func (f *DebianFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 
 		prefix := parts[0]
 		packageName := parts[1]
-		file := parts[2]
+		filenameEscaped := parts[2]
 
 		if !strings.HasPrefix(packageName, prefix) {
 			return false
@@ -204,7 +205,12 @@ func (f *DebianFilter) matchPackage(r *http.Request, poolPrefix string) bool {
 			return false
 		}
 
-		if !regexDebianFilename.MatchString(file) {
+		filename, err := url.PathUnescape(filenameEscaped)
+		if err != nil {
+			return false
+		}
+
+		if !regexDebianFilename.MatchString(filename) {
 			return false
 		}
 
