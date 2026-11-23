@@ -137,6 +137,11 @@ func (f *DebianFilter) Transform(r *http.Request) (*http.Request, bool) {
 		if f.matchPackage(r, poolPrefix) {
 			return r, true
 		}
+
+		poolNonFreeFirmwarePrefix := "/debian/pool/non-free-firmware/"
+		if f.matchPackage(r, poolNonFreeFirmwarePrefix) {
+			return r, true
+		}
 	}
 
 	return nil, false
