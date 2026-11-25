@@ -126,6 +126,7 @@ func (f *UbuntuFilter) matchFixed(parts []string) bool {
 
 	switch parts[1] {
 	case "binary-amd64":
+	case "binary-arm64":
 	case "i18n":
 	case "dep11":
 	case "cnf":
