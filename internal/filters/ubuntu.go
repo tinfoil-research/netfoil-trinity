@@ -12,11 +12,14 @@ import (
 
 type UbuntuFilter struct {
 	packageTrie    trie.Node
-	fixedTrie      trie.Node
 	allowedHeaders map[string]*regexp.Regexp
+	host           string
+	pathPrefix     string
+	components     map[string]struct{}
+	suites         map[string]struct{}
 }
 
-func NewUbuntuFilter(allowedPackages []string) (*UbuntuFilter, error) {
+func NewUbuntuFilter(host string, pathPrefix string, components []string, suites []string, allowedPackages []string) (*UbuntuFilter, error) {
 	packageTrie := trie.Node{}
 	for _, repo := range allowedPackages {
 		err := packageTrie.Insert(repo, nil)
@@ -25,34 +28,24 @@ func NewUbuntuFilter(allowedPackages []string) (*UbuntuFilter, error) {
 		}
 	}
 
-	fixedList := []string{
-		"InRelease",
-
-		"main/binary-amd64/by-hash/SHA256/*",
-		"main/i18n/by-hash/SHA256/*",
-		"main/dep11/by-hash/SHA256/*",
-
-		"universe/binary-amd64/by-hash/SHA256/*",
-		"universe/i18n/by-hash/SHA256/*",
-		"universe/dep11/by-hash/SHA256/*",
-
-		"restricted/binary-amd64/by-hash/SHA256/*",
-		"restricted/i18n/by-hash/SHA256/*",
+	componentsMap := make(map[string]struct{})
+	for _, component := range components {
+		componentsMap[component] = struct{}{}
 	}
 
-	fixedTrie := trie.Node{}
-	for _, fixed := range fixedList {
-		err := fixedTrie.Insert(fixed, nil)
-		if err != nil {
-			return nil, err
-		}
+	suitesMap := make(map[string]struct{})
+	for _, suite := range suites {
+		suitesMap[suite] = struct{}{}
 	}
 
 	allowedHeaders := debianAllowedHeaders()
 	return &UbuntuFilter{
 		packageTrie:    packageTrie,
-		fixedTrie:      fixedTrie,
 		allowedHeaders: allowedHeaders,
+		host:           host,
+		pathPrefix:     pathPrefix,
+		components:     componentsMap,
+		suites:         suitesMap,
 	}, nil
 }
 
@@ -66,44 +59,47 @@ func (f *UbuntuFilter) Transform(r *http.Request) (*http.Request, bool) {
 		return r, false
 	}
 
-	if r.Host == "security.ubuntu.com" {
-		if r.Method != string(verbs.GET) {
+	if r.Host != f.host {
+		return r, false
+	}
+
+	if r.Method != string(verbs.GET) {
+		return nil, false
+	}
+
+	suffix, ok := strings.CutPrefix(r.URL.Path, f.pathPrefix)
+	if !ok {
+		return nil, false
+	}
+
+	parts := strings.Split(suffix, "/")
+	if len(parts) < 2 {
+		return nil, false
+	}
+
+	switch parts[0] {
+	case "dists":
+		suite := parts[1]
+		_, found := f.suites[suite]
+		if !found {
 			return nil, false
 		}
 
-		distTrixieSecurityPrefix := "/ubuntu/dists/resolute-security/"
-		if f.matchFixed(r, distTrixieSecurityPrefix) {
+		if f.matchFixed(parts[2:]) {
 			return r, true
 		}
-
-		poolPrefix := "/ubuntu/pool/main/"
-		if f.matchPackage(r, poolPrefix) {
-			return r, true
-		}
-	} else if r.Host == "archive.ubuntu.com" {
-		if r.Method != string(verbs.GET) {
+	case "pool":
+		component := parts[1]
+		_, found := f.components[component]
+		if !found {
 			return nil, false
 		}
 
-		distTrixiePrefix := "/ubuntu/dists/resolute/"
-		if f.matchFixed(r, distTrixiePrefix) {
+		if f.matchPackage(parts[2:]) {
 			return r, true
 		}
-
-		distResoluteUpdatesPrefix := "/ubuntu/dists/resolute-updates/"
-		if f.matchFixed(r, distResoluteUpdatesPrefix) {
-			return r, true
-		}
-
-		distResoluteBackportsPrefix := "/ubuntu/dists/resolute-backports/"
-		if f.matchFixed(r, distResoluteBackportsPrefix) {
-			return r, true
-		}
-
-		poolPrefix := "/ubuntu/pool/main/"
-		if f.matchPackage(r, poolPrefix) {
-			return r, true
-		}
+	default:
+		return nil, false
 	}
 
 	return nil, false
@@ -113,57 +109,76 @@ func (f *UbuntuFilter) MaskSupported() bool {
 	return false
 }
 
-func (f *UbuntuFilter) matchFixed(r *http.Request, distPrefix string) bool {
-	if after, ok := strings.CutPrefix(r.RequestURI, distPrefix); ok {
-		if !regexDebianPath.MatchString(after) {
-			return false
-		}
-
-		_, match := f.fixedTrie.Match([]byte(after))
-		if match {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (f *UbuntuFilter) matchPackage(r *http.Request, poolPrefix string) bool {
-	if after, ok := strings.CutPrefix(r.RequestURI, poolPrefix); ok {
-		parts := strings.Split(after, "/")
-
-		if len(parts) != 3 {
-			return false
-		}
-
-		prefix := parts[0]
-		packageName := parts[1]
-		filenameEscaped := parts[2]
-
-		if !strings.HasPrefix(packageName, prefix) {
-			return false
-		}
-
-		if !regexDebianPackageName.MatchString(packageName) {
-			return false
-		}
-
-		_, found := f.packageTrie.Match([]byte(packageName))
-		if !found {
-			return false
-		}
-
-		filename, err := url.PathUnescape(filenameEscaped)
-		if err != nil {
-			return false
-		}
-
-		if !regexDebianFilename.MatchString(filename) {
-			return false
-		}
-
+func (f *UbuntuFilter) matchFixed(parts []string) bool {
+	if len(parts) == 1 && parts[0] == "InRelease" {
 		return true
 	}
 
-	return false
+	if len(parts) != 5 {
+		return false
+	}
+
+	component := parts[0]
+	_, found := f.components[component]
+	if !found {
+		return false
+	}
+
+	switch parts[1] {
+	case "binary-amd64":
+	case "i18n":
+	case "dep11":
+	case "cnf":
+	default:
+		return false
+	}
+
+	if parts[2] != "by-hash" {
+		return false
+	}
+
+	if parts[3] != "SHA256" {
+		return false
+	}
+
+	hash := parts[4]
+	if !regexSHA256.MatchString(hash) {
+		return false
+	}
+
+	return true
+}
+
+func (f *UbuntuFilter) matchPackage(parts []string) bool {
+	if len(parts) != 3 {
+		return false
+	}
+
+	prefix := parts[0]
+	packageName := parts[1]
+	filenameEscaped := parts[2]
+
+	if !strings.HasPrefix(packageName, prefix) {
+		return false
+	}
+
+	if !regexDebianPackageName.MatchString(packageName) {
+		return false
+	}
+
+	_, found := f.packageTrie.Match([]byte(packageName))
+	if !found {
+		return false
+	}
+
+	filename, err := url.PathUnescape(filenameEscaped)
+	if err != nil {
+		return false
+	}
+
+	if !regexDebianFilename.MatchString(filename) {
+		return false
+	}
+
+	return true
 }
