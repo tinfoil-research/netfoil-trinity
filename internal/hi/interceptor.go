@@ -73,18 +73,27 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 	}
 
 	if config.EnableUbuntu {
-		ubuntuConfig, err := readConfig(configDirectory, filepath.Join("providers", "ubuntu"))
+		ubuntuAllowedPackages, err := readConfig(configDirectory, filepath.Join("providers", "ubuntu"))
 		if err != nil {
 			return nil, err
 		}
 
-		ubuntuFilter, err := filters.NewUbuntuFilter(ubuntuConfig)
+		components := []string{"main", "restricted", "universe", "multiverse"}
+		suites := []string{"resolute", "resolute-updates", "resolute-backports"}
+		ubuntuFilter, err := filters.NewUbuntuFilter("archive.ubuntu.com", "/ubuntu/", components, suites, ubuntuAllowedPackages)
+		if err != nil {
+			return nil, err
+		}
+
+		securityComponents := []string{"main", "restricted", "universe", "multiverse"}
+		securitySuites := []string{"resolute-security"}
+		ubuntuSecurityFilter, err := filters.NewUbuntuFilter("security.ubuntu.com", "/ubuntu/", securityComponents, securitySuites, ubuntuAllowedPackages)
 		if err != nil {
 			return nil, err
 		}
 
 		filterMap["archive.ubuntu.com"] = ubuntuFilter
-		filterMap["security.ubuntu.com"] = ubuntuFilter
+		filterMap["security.ubuntu.com"] = ubuntuSecurityFilter
 	}
 
 	if config.EnableFedora {
