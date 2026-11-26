@@ -20,6 +20,7 @@ type Config struct {
 	EnableGo                   bool
 	EnableNPM                  bool
 	EnableDocker               bool
+	EnableGeneric              bool
 	MaskRequest                bool
 }
 
@@ -58,6 +59,7 @@ const (
 	keyEnableGo                   ConfigKey = "EnableGo"
 	keyEnableNPM                  ConfigKey = "EnableNPM"
 	keyEnableDocker               ConfigKey = "EnableDocker"
+	keyEnableGeneric              ConfigKey = "EnableGeneric"
 	keyMaskRequest                ConfigKey = "MaskRequest"
 )
 
@@ -123,6 +125,7 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		keyEnableGo,
 		keyEnableNPM,
 		keyEnableDocker,
+		keyEnableGeneric,
 		keyMaskRequest,
 	)
 
@@ -209,6 +212,11 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		return nil, err
 	}
 
+	enableGenric, err := configMap.getBool(keyEnableGeneric, false)
+	if err != nil {
+		return nil, err
+	}
+
 	maskRequest, err := configMap.getBool(keyMaskRequest, false)
 	if err != nil {
 		return nil, err
@@ -224,6 +232,7 @@ func parseConfig(scanner *bufio.Scanner) (*Config, error) {
 		EnableGo:                   enableGo,
 		EnableNPM:                  enableNPM,
 		EnableDocker:               enableDocker,
+		EnableGeneric:              enableGenric,
 		MaskRequest:                maskRequest,
 	}, nil
 }
