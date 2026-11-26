@@ -7,4 +7,5 @@
 # EnableGo=false
 # EnableNPM=false
 # EnableDocker=false
+# EnableGeneric=false
 # MaskRequest=false

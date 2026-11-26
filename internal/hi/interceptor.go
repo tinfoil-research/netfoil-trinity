@@ -182,13 +182,15 @@ func NewInterceptor(configDirectory string, clientCACertPool *x509.CertPool, caK
 		filterMap["production.cloudfront.docker.com"] = dockerFilter
 	}
 
-	m, err := filters.LoadAllGeneric(configDirectory)
-	if err != nil {
-		return nil, err
-	}
+	if config.EnableGeneric {
+		m, err := filters.LoadAllGeneric(configDirectory)
+		if err != nil {
+			return nil, err
+		}
 
-	for k, v := range m {
-		filterMap[k] = v
+		for k, v := range m {
+			filterMap[k] = v
+		}
 	}
 
 	logChannel := make(chan handlerLog, 50)
